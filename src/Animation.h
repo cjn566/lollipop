@@ -3,65 +3,71 @@
 
     #include "FastLED.h"
     
-    #define NUM_ANIMS           2
+    #define NUM_ANIMS           1
     #define NUM_LEDS            185
     #define ORDER               GRB
 
+
     struct {
         uint8_t anim = 0;
-        uint8_t hue = 0;
         uint8_t stepsSinceLastFrame = 0;
+
         CRGBArray<NUM_LEDS> leds;
 
-        uint8_t u8_1, u8_2;
-        int optInt;
-        long optLong;
-        float optFloat;
-
-        void clear(){
-            u8_1 = 0;
-            u8_2 = 0;
-            optInt = 0;
-            optLong = 0;
-            optFloat = 0;
-        }
     } $;
 
     struct Animation {
+        uint8_t numParams;
         void (*init)();
+        void (*adjParam)(uint8_t, int8_t);
         void (*drawFrame)();
-        Animation(void (*init)(), void (*df)()) : 
+        Animation(int np, void (*init)(), void (*ap)(uint8_t, int8_t), void (*df)()) : 
+            numParams(np),
             init(init), 
+            adjParam(ap),
             drawFrame(df) 
             {}
     };
 
 
     // ------------------ SOLID ----------------
-    void testInit(){
-        $.clear();
+
+    #define NUM_PARAMS_SOLID 1
+
+    struct {
+        uint8_t hue = 0;
+    } data_solid;
+
+    void init_solid(){
     }
-    void testDrawFrame(){
-        $.leds(0, NUM_LEDS) = CHSV($.hue, 255,255);
+    void adjParam_solid(uint8_t param, int8_t delta){
+        switch(param){
+            case 0:
+                data_solid.hue += delta;
+                break;
+        }
+    }
+    void drawFrame_solid(){
+        $.leds(0, NUM_LEDS) = CHSV(data_solid.hue, 255,255);
     }
 
 
     // ------------------ RAINBOW ----------------
-    #define RAINBOW_TOP 255
-    void rainbowInit(){
-        $.clear();
+    // #define RAINBOW_TOP 255
+    // void rainbowInit(){
+    //     $.clear();
 
-    }
-    void rainbowDraw(){
-        FastLED.clear();
-        $.u8_1 += $.stepsSinceLastFrame;
-        fill_rainbow($.leds, NUM_LEDS, $.hue + $.u8_1, 255);
-    }
+    // }
+    // void rainbowDraw(){
+    //     FastLED.clear();
+    //     $.u8_1 += $.stepsSinceLastFrame;
+    //     fill_rainbow($.leds, NUM_LEDS, $.hue + $.u8_1, 255);
+    // }
 
     // ------------------ COLLECTION ----------------
     Animation animations[NUM_ANIMS] = {
-        Animation(testInit, testDrawFrame), 
-        Animation(rainbowInit, rainbowDraw)
+        Animation(NUM_PARAMS_SOLID, init_solid, adjParam_solid, drawFrame_solid), 
+        //Animation(rainbowInit, rainbowDraw)
     };
 
 

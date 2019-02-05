@@ -1,5 +1,5 @@
  #define DEBUG
- // #define TIMING
+ #define TIMING
 
 
 #include <Arduino.h>
@@ -22,9 +22,9 @@
 #define BLINK_STEPS           FREQ_TO_STEPS(3)
 
 // Parameters
+#define NUM_GLOBAL_PARAMS 2
 #define INIT_BRIGHTNESS   10
 #define INIT_SPEED        128
-#define INIT_HUE          10
 #define MAX_BRIGHTNESS    255
 #define MAX_SPEED         30
 #define BRIGH_ADJ_MULT    3
@@ -43,6 +43,7 @@
 #define ENC_TICKS_PER_INDENT   4
 
 // Macros
+#define ANIM animations[$.anim]
 #define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
 #define CLAMP_8(n) ( n > 255? 255 : ( n < 0? 0 : n))
 
@@ -54,7 +55,6 @@ Encoder myEnc(ENCODER_A, ENCODER_B);
 // Settings
 uint8_t brightness = INIT_BRIGHTNESS;
 uint8_t speed = INIT_SPEED;
-uint8_t hue = INIT_HUE;
 
 // State
 enum States {
@@ -62,15 +62,14 @@ enum States {
   EDIT_DELAY,
   EDIT
 };
-enum EditStates {
+enum GlobalParams {
   BRIGHTNESS,
   SPEED,
-  HUE
 };
 bool blinkState = true;
 unsigned int blinkStep = BLINK_STEPS;
 States state = HOME;
-EditStates editState = BRIGHTNESS;
+unsigned int editState = BRIGHTNESS;
 long oldPosition  = -999;
 
 //-------------- INTERRUPT HANDLERS -------------------------
@@ -117,6 +116,8 @@ void setup() {
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_MILLIAMPS);
   FastLED.addLeds<WS2812B, LED_DATA, ORDER>($.leds, NUM_LEDS);
   FastLED.setBrightness(INIT_BRIGHTNESS);
+
+  ANIM.init();
 }
 
 //-------------- STATE / UI FUNCTIONS -------------------------
@@ -131,14 +132,6 @@ void changeState(States newState){
   
   #ifdef DEBUG
   Serial.printf("\nstate = %d\n", state);
-  #endif
-}
-
-void changeEditState(EditStates newState){
-  editState = newState;
-  
-  #ifdef DEBUG
-  Serial.printf("\nEdit State = %d\n", editState);
   #endif
 }
 
@@ -160,24 +153,15 @@ void handleButton(){
     case EDIT_DELAY:    // Start a new animation
       if(!isPressed){
         $.anim = ($.anim + 1) % NUM_ANIMS;
-        animations[$.anim].init();
+        ANIM.init();
         changeState(HOME);
       }
       break;
     case EDIT:
       if(isPressed){
-        switch (editState){
-          case BRIGHTNESS:
-            changeEditState(SPEED);
-            break;
-          case SPEED:
-            changeEditState(HUE);
-            break;
-          case HUE:
-            changeEditState(BRIGHTNESS);
-            break;
-        }
+        editState = (editState + 1) % (NUM_GLOBAL_PARAMS + ANIM.numParams);
       }
+      break;
   }
 }
 
@@ -201,11 +185,8 @@ void changeValue(int8_t delta){
       Serial.printf("speed = %d\n", speed);
       #endif
       break;
-    case HUE:
-      $.hue += delta;
-      #ifdef DEBUG
-      Serial.printf("hue = %d\n", hue);
-      #endif
+    default:
+      ANIM.adjParam(editState - NUM_GLOBAL_PARAMS, delta);
       break;
   }
 }
@@ -217,21 +198,19 @@ void doFrame(){
   Serial.print("f");
   #endif
   if(state == EDIT){
-    $.leds[0] = CRGB::Black;
-    $.leds[1] = CRGB::Black;
-    $.leds[2] = CRGB::Black;
+    $.leds(0, NUM_GLOBAL_PARAMS + ANIM.numParams) = CRGB::Wheat;
     if(!speed){
       $.leds[editState] = CRGB::Red;
     }
     else if(blinkState){
-      $.leds[editState] = CHSV(hue, 255, 255);
+      $.leds[editState] = CRGB::Green;
     }
     else {
-      $.leds[editState] = CHSV(hue + (uint8_t)126, 255, 255);
+      $.leds[editState] = CRGB::Black;
     }
   }
   FastLED.show();
-  animations[$.anim].drawFrame();
+  ANIM.drawFrame();
   $.stepsSinceLastFrame = 0;
 }
 
