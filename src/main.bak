@@ -1,5 +1,4 @@
- #define DEBUG
- // #define TIMING
+#define DEBUG
 
 
 #include <Arduino.h>
@@ -17,7 +16,7 @@
 
 // UI Timing
 #define DEBOUNCE_MILLIS       50
-#define EDIT_HOLD_MILLIS      700
+#define EDIT_HOLD_MILLIS      1000
 #define EDIT_TIMEOUT_MILLIS   4000
 #define BLINK_STEPS           FREQ_TO_STEPS(3)
 
@@ -30,17 +29,21 @@
 #define BRIGH_ADJ_MULT    3
 #define SPEED_ADJ_MULT    3
 #define SPEED_REDUCTION_FACTOR    2
-#define BRIGHT_MACRO_ADJ_THRESH    50
-
 
 // Video
 #define FPS                 60
 #define ANIM_STEPPER_FREQ   100
 
 // Misc
-#define MAX_MILLIAMPS          1500
-#define STARTUP_DELAY          1000
-#define ENC_TICKS_PER_INDENT   4
+
+#ifdef DEBUG
+#define MAX_MILLIAMPS       100
+#else
+#define MAX_MILLIAMPS       2000
+#endif
+
+
+#define STARTUP_DELAY       1000
 
 // Macros
 #define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
@@ -157,7 +160,7 @@ void handleButton(){
         changeState(EDIT_DELAY);
       }
       break;
-    case EDIT_DELAY:    // Start a new animation
+    case EDIT_DELAY:
       if(!isPressed){
         $.anim = ($.anim + 1) % NUM_ANIMS;
         animations[$.anim].init();
@@ -184,7 +187,7 @@ void handleButton(){
 void changeValue(int8_t delta){
   switch(editState){
     case BRIGHTNESS:
-      brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (delta * BRIGH_ADJ_MULT) : delta));
+      brightness = CLAMP_8(brightness + (delta * BRIGH_ADJ_MULT));
       FastLED.setBrightness(brightness);
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
@@ -213,7 +216,7 @@ void changeValue(int8_t delta){
 //-------------- VISUAL FUNCTIONS -------------------------
 
 void doFrame(){
-  #ifdef TIMING
+  #ifdef DEBUG
   Serial.print("f");
   #endif
   if(state == EDIT){
@@ -243,7 +246,7 @@ void stepAnimation(){
 
   $.stepsSinceLastFrame++;
 
-  #ifdef TIMING
+  #ifdef DEBUG
   Serial.print(".");
   #endif
 }
@@ -257,12 +260,12 @@ void loop() {
     handleButton();
   }
   if(state == EDIT_DELAY){
-    if((millis() - edit_delay_start_millis) > EDIT_HOLD_MILLIS){ 
-      //Held down button long enough to enter EDIT mode
+    if((millis() - edit_delay_start_millis) > EDIT_HOLD_MILLIS){
       changeState(EDIT);
     }
   }
-  if(state == EDIT){    
+  if(state == EDIT){
+    
     if((millis() - lastActivityMillis) > EDIT_TIMEOUT_MILLIS){
       changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME state
     } else {      
@@ -282,7 +285,7 @@ void loop() {
 
   if(v_frameClip){
     v_frameClip = false;
-    #ifdef TIMING
+    #ifdef DEBUG
     Serial.print("*");
     #endif
   }
@@ -294,7 +297,7 @@ void loop() {
 
   if(v_animStepClip){
     v_animStepClip = false;
-    #ifdef TIMING
+    #ifdef DEBUG
     Serial.print("!");
     #endif
   }

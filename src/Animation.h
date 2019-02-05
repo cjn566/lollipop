@@ -4,7 +4,7 @@
     #include "FastLED.h"
     
     #define NUM_ANIMS           2
-    #define NUM_LEDS            180
+    #define NUM_LEDS            185
     #define ORDER               GRB
 
     struct {
@@ -42,7 +42,7 @@
         $.clear();
     }
     void testDrawFrame(){
-        FastLED.showColor(CRGB::White);
+        $.leds(0, NUM_LEDS) = CHSV($.hue, 255,255);
     }
 
 
