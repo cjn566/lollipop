@@ -1,4 +1,4 @@
-#define DEBUG
+// #define DEBUG
 
 
 #include <Arduino.h>
@@ -9,39 +9,50 @@
 
 //          SETTINGS
 // Pins
-#define ENCODER_A     5
-#define ENCODER_B     6
-#define ENCODER_BTN   23
+#define ENCODER_A     23
+#define ENCODER_B     22
+#define ENCODER_BTN   4
 #define LED_DATA      17
 
 // UI Timing
 #define DEBOUNCE_MILLIS       50
 #define EDIT_HOLD_MILLIS      1000
 #define EDIT_TIMEOUT_MILLIS   4000
-#define BLINK_STEPS           FREQ_TO_STEPS(2)
+#define BLINK_STEPS           FREQ_TO_STEPS(3)
 
 // Parameters
-#define INIT_BRIGHTNESS   30
-#define INIT_SPEED        30
+#define INIT_BRIGHTNESS   10
+#define INIT_SPEED        128
 #define INIT_HUE          10
 #define MAX_BRIGHTNESS    255
 #define MAX_SPEED         30
-#define MAX_HUES          255
+#define BRIGH_ADJ_MULT    3
+#define SPEED_ADJ_MULT    3
+#define SPEED_REDUCTION_FACTOR    2
 
 // Video
-#define FPS                 30
+#define FPS                 60
 #define ANIM_STEPPER_FREQ   100
 
 // Misc
-#define MAX_MILLIAMPS       2950
+
+#ifdef DEBUG
+#define MAX_MILLIAMPS       100
+#else
+#define MAX_MILLIAMPS       2000
+#endif
+
+
+#define STARTUP_DELAY       1000
 
 // Macros
 #define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
+#define CLAMP_8(n) ( n > 255? 255 : ( n < 0? 0 : n))
 
 //          VARIABLES AND STUFF
 // Hardware
 Encoder myEnc(ENCODER_A, ENCODER_B);
-CRGB leds[NUM_LEDS];
+//CRGB leds[NUM_LEDS];
 
 // Settings
 uint8_t brightness = INIT_BRIGHTNESS;
@@ -60,7 +71,7 @@ enum EditStates {
   HUE
 };
 bool blinkState = true;
-unsigned int blinkStep = BLINK_STEPS, currAnimIdx = 0;
+unsigned int blinkStep = BLINK_STEPS;
 States state = HOME;
 EditStates editState = BRIGHTNESS;
 long oldPosition  = -999;
@@ -93,16 +104,22 @@ void debounceButton(){
 //-------------- SETUP -------------------------
 
 void setup() {
+  #ifdef DEBUG
   Serial.begin(9600);
+  #endif
+
+  delay(STARTUP_DELAY);
+
   Timer1.initialize(1000000 / FPS);
   Timer1.attachInterrupt(frameInt);
   Timer3.initialize(1000000 / ANIM_STEPPER_FREQ);
   Timer3.attachInterrupt(stepAnimationInt);
+  pinMode(ENCODER_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), debounceButton, CHANGE);
 
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_MILLIAMPS);
-  FastLED.addLeds<WS2812B, LED_DATA, RGB>(leds, NUM_LEDS);
-  FastLED.setBrightness(brightness);
+  FastLED.addLeds<WS2812B, LED_DATA, ORDER>($.leds, NUM_LEDS);
+  FastLED.setBrightness(INIT_BRIGHTNESS);
 }
 
 //-------------- STATE / UI FUNCTIONS -------------------------
@@ -112,6 +129,7 @@ void changeState(States newState){
   if(newState == EDIT){
     blinkState = true;
     blinkStep = BLINK_STEPS;
+    oldPosition = myEnc.read();
   }
   
   #ifdef DEBUG
@@ -144,7 +162,8 @@ void handleButton(){
       break;
     case EDIT_DELAY:
       if(!isPressed){
-        // changeAnimation();
+        $.anim = ($.anim + 1) % NUM_ANIMS;
+        animations[$.anim].init();
         changeState(HOME);
       }
       break;
@@ -165,30 +184,28 @@ void handleButton(){
   }
 }
 
-unsigned int adjust(unsigned int initial, int delta, int max){
-  int res = initial + delta;
-  int testCeiling =         res > max?  max : res;
-  int testFloor =   testCeiling < 0?      0 : testCeiling;
-  return testFloor;
-}
-
 void changeValue(int8_t delta){
   switch(editState){
     case BRIGHTNESS:
-      brightness = adjust(brightness, delta, MAX_BRIGHTNESS);
+      brightness = CLAMP_8(brightness + (delta * BRIGH_ADJ_MULT));
       FastLED.setBrightness(brightness);
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
       #endif
       break;
     case SPEED:
-      speed = adjust(speed, delta, MAX_SPEED);
+      speed = CLAMP_8(speed + (delta * SPEED_ADJ_MULT));
+      if(!speed){
+        Timer3.stop();
+      } else {
+        Timer3.setPeriod((1000000 * SPEED_REDUCTION_FACTOR) / speed);
+      }
       #ifdef DEBUG
       Serial.printf("speed = %d\n", speed);
       #endif
       break;
     case HUE:
-      hue += delta; // = adjust(hue, delta, MAX_HUES, true);
+      $.hue += delta;
       #ifdef DEBUG
       Serial.printf("hue = %d\n", hue);
       #endif
@@ -200,28 +217,37 @@ void changeValue(int8_t delta){
 
 void doFrame(){
   #ifdef DEBUG
-  //Serial.print("f");
+  Serial.print("f");
   #endif
   if(state == EDIT){
-    leds[0] = CRGB::Black;
-    leds[1] = CRGB::Black;
-    leds[2] = CRGB::Black;
-    if(blinkState){
-      leds[editState] = CHSV(hue, 255, 255);
+    $.leds[0] = CRGB::Black;
+    $.leds[1] = CRGB::Black;
+    $.leds[2] = CRGB::Black;
+    if(!speed){
+      $.leds[editState] = CRGB::Red;
+    }
+    else if(blinkState){
+      $.leds[editState] = CHSV(hue, 255, 255);
+    }
+    else {
+      $.leds[editState] = CHSV(hue + (uint8_t)126, 255, 255);
     }
   }
   FastLED.show();
-  animations[currAnimIdx].render(leds, hue);
+  animations[$.anim].drawFrame();
+  $.stepsSinceLastFrame = 0;
 }
 
 void stepAnimation(){
   if((state == EDIT) && (!(blinkStep--))){
-    blinkStep = BLINK_STEPS - speed;
+    blinkStep = BLINK_STEPS;
     blinkState = !blinkState;
-  } 
+  }
+
+  $.stepsSinceLastFrame++;
 
   #ifdef DEBUG
-  //Serial.print(".");
+  Serial.print(".");
   #endif
 }
 
@@ -239,8 +265,9 @@ void loop() {
     }
   }
   if(state == EDIT){
+    
     if((millis() - lastActivityMillis) > EDIT_TIMEOUT_MILLIS){
-      changeState(HOME);
+      changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME state
     } else {      
       long newPosition = myEnc.read();
       if (newPosition != oldPosition) {
