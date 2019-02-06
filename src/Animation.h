@@ -2,11 +2,14 @@
     #define ANIMATION_H
 
     #include "FastLED.h"
+    #include "util.h"
     
-    #define NUM_ANIMS           1
-    #define NUM_LEDS            185
+    #define NUM_ANIMS           2
+    #define OUTER_LEDS          180
+    #define CENTER_LEDS         27
+    #define NUM_LEDS            (OUTER_LEDS + CENTER_LEDS)
     #define ORDER               GRB
-
+    
 
     struct {
         uint8_t anim = 0;
@@ -16,13 +19,21 @@
 
     } $;
 
+    // TODO: this train of thought..
+    struct Parameter {
+        CRGB backgroundColor;
+        uint8_t ticksToAdjust;
+    };
+
     struct Animation {
         uint8_t numParams;
+        Parameter *paramList;
         void (*init)();
-        void (*adjParam)(uint8_t, int8_t);
+        void (*adjParam)(uint8_t, bool);
         void (*drawFrame)();
-        Animation(int np, void (*init)(), void (*ap)(uint8_t, int8_t), void (*df)()) : 
+        Animation(int np, Parameter *pl, void (*init)(), void (*ap)(uint8_t, bool), void (*df)()) : 
             numParams(np),
+            paramList(pl),
             init(init), 
             adjParam(ap),
             drawFrame(df) 
@@ -31,43 +42,111 @@
 
 
     // ------------------ SOLID ----------------
-
-    #define NUM_PARAMS_SOLID 1
-
-    struct {
+    namespace solid {
+        const uint8_t PARAMS = 1;
         uint8_t hue = 0;
-    } data_solid;
 
-    void init_solid(){
-    }
-    void adjParam_solid(uint8_t param, int8_t delta){
-        switch(param){
-            case 0:
-                data_solid.hue += delta;
-                break;
+        Parameter params[PARAMS] = {
+            Parameter{CRGB::Fuchsia, 1} // hue
+        };
+        void init(){
+        }
+        void adjParam(uint8_t param, bool up){
+            switch(param){
+                case 0:
+                    hue += INCDEC;
+                    break;
+            }
+        }
+        void drawFrame(){
+            $.leds(0, NUM_LEDS - 1) = CHSV(hue, 255,255);
         }
     }
-    void drawFrame_solid(){
-        $.leds(0, NUM_LEDS) = CHSV(data_solid.hue, 255,255);
-    }
-
 
     // ------------------ RAINBOW ----------------
-    // #define RAINBOW_TOP 255
-    // void rainbowInit(){
-    //     $.clear();
+    namespace rainbow {
+        const uint8_t PARAMS = 2;
+        // Params Vars
+        uint8_t baseHue = 0;
+        uint8_t stretch = NUM_LEDS;
+        
+        Parameter params[PARAMS] = {
+            Parameter{CRGB::Crimson, 1}, // Hue
+            Parameter{CRGB::DarkGray, 8} // Stretch
+        };
 
-    // }
-    // void rainbowDraw(){
-    //     FastLED.clear();
-    //     $.u8_1 += $.stepsSinceLastFrame;
-    //     fill_rainbow($.leds, NUM_LEDS, $.hue + $.u8_1, 255);
-    // }
+        // Step Vars
+        uint8_t currHue = 0;
+
+
+        void init(){
+        }
+
+        void adjParam(uint8_t param, bool up){
+            switch(param){
+                case 0:
+                    baseHue += INCDEC;
+                    break;
+                case 1:
+                    stretch += INCDEC;
+                    break;
+            }
+        }
+
+        void drawFrame(){
+            FastLED.clear();
+            currHue += $.stepsSinceLastFrame;
+            fill_rainbow($.leds, NUM_LEDS, baseHue + currHue, stretch);
+        }
+    }
+
+    // ------------------ PEPPERMINT ----------------
+    namespace peppermint{
+        const uint8_t PARAMS = 2;
+        uint8_t baseHue = 0;
+        uint8_t currHue = 0;
+        uint8_t numSpokes = 6;
+
+        Parameter params[PARAMS] = {
+            Parameter(),
+            Parameter()
+        };
+
+        void init(){
+        }
+
+        void adjParam(uint8_t param, bool up){
+            switch(param){
+                case 0:
+                    baseHue += INCDEC;
+                    break;
+                case 1:
+                    numSpokes += INCDEC;
+                    break;
+            }
+        }
+
+        void drawFrame(){
+            FastLED.clear();
+            currHue += $.stepsSinceLastFrame;
+            $.leds(OUTER_LEDS, NUM_LEDS).fill_rainbow(baseHue + currHue);
+        }
+    }
+
+    
+    
+    
 
     // ------------------ COLLECTION ----------------
     Animation animations[NUM_ANIMS] = {
-        Animation(NUM_PARAMS_SOLID, init_solid, adjParam_solid, drawFrame_solid), 
-        //Animation(rainbowInit, rainbowDraw)
+        // #define _ANIM_NAME_ peppermint
+        // Animation(_ANIM_NAME_::PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::init, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame),
+        // #undef _ANIM_NAME_
+        #define _ANIM_NAME_ rainbow
+        Animation(_ANIM_NAME_::PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::init, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame),
+        #undef _ANIM_NAME_
+        #define _ANIM_NAME_ solid
+        Animation(_ANIM_NAME_::PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::init, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame)
     };
 
 

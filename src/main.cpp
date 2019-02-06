@@ -1,5 +1,5 @@
  #define DEBUG
- #define TIMING
+ // #define TIMING
 
 
 #include <Arduino.h>
@@ -7,6 +7,7 @@
 #include <TimerOne.h>
 #include <TimerThree.h>
 #include "Animation.h"
+#include "util.h"
 
 //          SETTINGS
 // Pins
@@ -45,7 +46,6 @@
 // Macros
 #define ANIM animations[$.anim]
 #define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
-#define CLAMP_8(n) ( n > 255? 255 : ( n < 0? 0 : n))
 
 //          VARIABLES AND STUFF
 // Hardware
@@ -70,7 +70,6 @@ bool blinkState = true;
 unsigned int blinkStep = BLINK_STEPS;
 States state = HOME;
 unsigned int editState = BRIGHTNESS;
-long oldPosition  = -999;
 
 //-------------- INTERRUPT HANDLERS -------------------------
 
@@ -88,9 +87,15 @@ void stepAnimationInt(){
   v_animStepKey = true;
 }
 
-volatile bool v_debouncing = false, v_buttonIsPressed = false;
+volatile bool v_debouncing = false;
 volatile unsigned long v_debounceStartTime = 0;
 void debounceButton(){
+
+    
+    #ifdef DEBUG
+    Serial.print('b');
+    #endif
+
     if(!v_debouncing){
       v_debouncing = true;
       v_debounceStartTime = millis();
@@ -105,6 +110,8 @@ void setup() {
   #endif
 
   delay(STARTUP_DELAY);
+  
+  myEnc.write(0);
 
   Timer1.initialize(1000000 / FPS);
   Timer1.attachInterrupt(frameInt);
@@ -127,7 +134,7 @@ void changeState(States newState){
   if(newState == EDIT){
     blinkState = true;
     blinkStep = BLINK_STEPS;
-    oldPosition = myEnc.read();
+    myEnc.write(0);
   }
   
   #ifdef DEBUG
@@ -165,17 +172,19 @@ void handleButton(){
   }
 }
 
-void changeValue(int8_t delta){
+
+
+void changeValue(bool up){
   switch(editState){
     case BRIGHTNESS:
-      brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (delta * BRIGH_ADJ_MULT) : delta));
+      brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
       #endif
       break;
     case SPEED:
-      speed = CLAMP_8(speed + (delta * SPEED_ADJ_MULT));
+      speed = CLAMP_8(speed + (INCDEC * SPEED_ADJ_MULT));
       if(!speed){
         Timer3.stop();
       } else {
@@ -186,7 +195,7 @@ void changeValue(int8_t delta){
       #endif
       break;
     default:
-      ANIM.adjParam(editState - NUM_GLOBAL_PARAMS, delta);
+      ANIM.adjParam(editState - NUM_GLOBAL_PARAMS, up);
       break;
   }
 }
@@ -198,7 +207,7 @@ void doFrame(){
   Serial.print("f");
   #endif
   if(state == EDIT){
-    $.leds(0, NUM_GLOBAL_PARAMS + ANIM.numParams) = CRGB::Wheat;
+    $.leds(0, NUM_GLOBAL_PARAMS + ANIM.numParams - 1) = CRGB::CornflowerBlue;
     if(!speed){
       $.leds[editState] = CRGB::Red;
     }
@@ -245,10 +254,10 @@ void loop() {
     if((millis() - lastActivityMillis) > EDIT_TIMEOUT_MILLIS){
       changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME state
     } else {      
-      long newPosition = myEnc.read();
-      if (newPosition != oldPosition) {
-        changeValue((int8_t)(newPosition - oldPosition));
-        oldPosition = newPosition;
+      int8_t newPosition = myEnc.read();
+      if (newPosition >= 8 || newPosition <= -8) {
+        changeValue(newPosition >= 8);
+        myEnc.write(0);
         lastActivityMillis = millis();
       }
     }
