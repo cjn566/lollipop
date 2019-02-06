@@ -200,28 +200,6 @@ void changeValue(bool up){
   }
 }
 
-//-------------- VISUAL FUNCTIONS -------------------------
-
-void doFrame(){
-  #ifdef TIMING
-  Serial.print("f");
-  #endif
-  if(state == EDIT){
-    $.leds(0, NUM_GLOBAL_PARAMS + ANIM.numParams - 1) = CRGB::CornflowerBlue;
-    if(!speed){
-      $.leds[editState] = CRGB::Red;
-    }
-    else if(blinkState){
-      $.leds[editState] = CRGB::Green;
-    }
-    else {
-      $.leds[editState] = CRGB::Black;
-    }
-  }
-  FastLED.show();
-  ANIM.drawFrame();
-  $.stepsSinceLastFrame = 0;
-}
 
 void stepAnimation(){
   if((state == EDIT) && (!(blinkStep--))){
