@@ -8,6 +8,8 @@
     #define NUM_LEDS            204
     #define ORDER               GRB
     
+    #include "radii.h"
+    
 
     struct {
         uint8_t anim = 0;
@@ -122,11 +124,11 @@
     // ------------------ RAINBOW ----------------
     namespace rainbow {
         #define MAX_STRETCH 8
-        const int8_t PARAMS = 1;
+        const int8_t NUM_PARAMS = 1;
         // Params Vars
         int8_t stretch = 1;
         
-        Parameter params[PARAMS] = {
+        Parameter params[NUM_PARAMS] = {
             Parameter{CRGB::DarkGray, 8},   // Stretch
         };
 
@@ -166,12 +168,12 @@
 
         // ------------------ Full Gradient ----------------
     namespace gradient {
-        const uint8_t PARAMS = 2;
+        const uint8_t NUM_PARAMS = 2;
         // Params Vars
         uint8_t stretch = 1;
         uint8_t baseHue = 0;
         
-        Parameter params[PARAMS] = {
+        Parameter params[NUM_PARAMS] = {
             Parameter{CRGB::DarkGray, 2},   // Stretch
             Parameter{CRGB::DarkGray, 4},   // Hue
         };
@@ -219,74 +221,74 @@
     }
 
     // ------------------ Particles ----------------
-    namespace gradient {
-        const uint8_t PARAMS = 2;
-        // Params Vars
-        uint8_t stretch = 1;
-        uint8_t baseHue = 0;
+    // namespace gradient {
+    //     const uint8_t NUM_PARAMS = 2;
+    //     // Params Vars
+    //     uint8_t stretch = 1;
+    //     uint8_t baseHue = 0;
         
-        Parameter params[PARAMS] = {
-            Parameter{CRGB::DarkGray, 2},   // Stretch
-            Parameter{CRGB::DarkGray, 4},   // Hue
-        };
+    //     Parameter params[NUM_PARAMS] = {
+    //         Parameter{CRGB::DarkGray, 2},   // Stretch
+    //         Parameter{CRGB::DarkGray, 4},   // Hue
+    //     };
 
-        struct Particle {
-            uint16_t location;
-            fract16 acceleration;
-            uint16_t velocity;
-            CRGB color;
-        } particles[200];
+    //     struct Particle {
+    //         uint16_t location;
+    //         fract16 acceleration;
+    //         uint16_t velocity;
+    //         CRGB color;
+    //     } particles[200];
 
-        // Step Vars
-        uint8_t currHue = 0;
+    //     // Step Vars
+    //     uint8_t currHue = 0;
 
-        void initAnim(){
-        }
+    //     void initAnim(){
+    //     }
 
-        void initParam(uint8_t p){
-            switch(p){
-                case 0: // Stretch
-                    drawScale.init(drawScale.NOSIGN, (stretch >> 4));
-                    break;
-                case 1: // Hue
-                    drawScale.init(drawScale.OFF);
-                    break;
-            }
-        }
+    //     void initParam(uint8_t p){
+    //         switch(p){
+    //             case 0: // Stretch
+    //                 drawScale.init(drawScale.NOSIGN, (stretch >> 4));
+    //                 break;
+    //             case 1: // Hue
+    //                 drawScale.init(drawScale.OFF);
+    //                 break;
+    //         }
+    //     }
 
-        void adjParam(uint8_t param, bool up){
-            switch(param){
-                case 0:
-                    stretch = CLAMP_8(stretch + INCDEC);
-                    drawScale.setValue((stretch >> 4));
+    //     void adjParam(uint8_t param, bool up){
+    //         switch(param){
+    //             case 0:
+    //                 stretch = CLAMP_8(stretch + INCDEC);
+    //                 drawScale.setValue((stretch >> 4));
 
-                    #ifdef DEBUG
-                    Serial.printf("Stretch: %d\n", (uint8_t)stretch);
-                    #endif
-                    break;
-                case 1:
-                    baseHue += INCDEC;
-                    break;
-            }
-        }
+    //                 #ifdef DEBUG
+    //                 Serial.printf("Stretch: %d\n", (uint8_t)stretch);
+    //                 #endif
+    //                 break;
+    //             case 1:
+    //                 baseHue += INCDEC;
+    //                 break;
+    //         }
+    //     }
 
-        void drawFrame(){
-            FastLED.clear();
-            currHue += $.stepsSinceLastFrame;
-            CHSV first =  CHSV(baseHue + currHue, $.saturation, 255);
-            CHSV second = CHSV(baseHue + currHue + stretch, $.saturation, 255);
-            fill_gradient<CRGB>($.leds, (uint16_t)NUM_LEDS, first, second, FORWARD_HUES);
-        }
-    }
+    //     void drawFrame(){
+    //         FastLED.clear();
+    //         currHue += $.stepsSinceLastFrame;
+    //         CHSV first =  CHSV(baseHue + currHue, $.saturation, 255);
+    //         CHSV second = CHSV(baseHue + currHue + stretch, $.saturation, 255);
+    //         fill_gradient<CRGB>($.leds, (uint16_t)NUM_LEDS, first, second, FORWARD_HUES);
+    //     }
+    // }
 
 
     // ------------------ FIND INDICES ----------------
     namespace indices {
-        const uint8_t PARAMS = 1;
+        const uint8_t NUM_PARAMS = 1;
         // Params Vars
         uint8_t currIdx = 0;
         
-        Parameter params[PARAMS] = {
+        Parameter params[NUM_PARAMS] = {
             Parameter{CRGB::DarkGray, 4} // Index
         };
 
@@ -321,65 +323,85 @@
     }
 
 
-    // ------------------ PEPPERMINT ----------------
-    namespace peppermint{
-        const uint8_t PARAMS = 2;
-        uint8_t baseHue = 0;
-        uint8_t currHue = 0;
-        uint8_t numSpokes = 6;
+    struct AnimationBase {
+        AnimationBase();
+        uint8_t NUM_PARAMS;
+        Parameter * params;
+        virtual void initAnim() =0;
+        virtual void initParam(uint8_t p) =0;
+        virtual void adjParam(uint8_t param, bool up) =0;
+        virtual void drawFrame() =0;
+    };
 
-        Parameter params[PARAMS] = {
-            Parameter(),
-            Parameter()
-        };
+    static struct Peppermint : AnimationBase{
+        static const uint8_t NUM_PARAMS = 2;
+        virtual void initAnim();
+        virtual void initParam(uint8_t p);
+        virtual void adjParam(uint8_t param, bool up);
+        virtual void drawFrame();
+    } peppermint;
 
-        void initAnim(){
-        }
 
-        void initParam(uint8_t p){
-            switch(p){
-                case 0:
-                    //drawScale.init(drawScale. , , CRGB:: );
-                    break;
-            }
-        }
-
-        void adjParam(uint8_t param, bool up){
-            switch(param){
-                case 0:
-                    baseHue += INCDEC;
-                    break;
-                case 1:
-                    numSpokes += INCDEC;
-                    break;
-            }
-        }
-
-        void drawFrame(){
-            FastLED.clear();
-            currHue += $.stepsSinceLastFrame;
-            //$.leds(OUTER_LEDS, NUM_LEDS).fill_rainbow(baseHue + currHue);
-        }
-    }
-
-    
-    
-    
 
     // ------------------ COLLECTION ----------------  Animation(int np, Parameter *pl, void (*init)(), void (*ip)(uint8_t), void (*ap)(uint8_t, bool), void (*df)()) : 
-    #define NUM_ANIMS           2
-    #define DECLARE_ANIM        Animation(_ANIM_NAME_::PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::initAnim, _ANIM_NAME_::initParam, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame),
+    #define NUM_ANIMS           3
+    #define DECLARE_CLASS_ANIM        Animation(_ANIM_NAME_.NUM_PARAMS, _ANIM_NAME_.params, _ANIM_NAME_.initAnim, _ANIM_NAME_.initParam, _ANIM_NAME_.adjParam, _ANIM_NAME_.drawFrame),
+    #define DECLARE_ANIM        Animation(_ANIM_NAME_::NUM_PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::initAnim, _ANIM_NAME_::initParam, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame),
     Animation animations[NUM_ANIMS] = {
+        #define _ANIM_NAME_ peppermint
+        DECLARE_CLASS_ANIM
+        #undef _ANIM_NAME_
         #define _ANIM_NAME_ rainbow
         DECLARE_ANIM
         #undef _ANIM_NAME_
-        #define _ANIM_NAME_ gradient
+        #define _ANIM_NAME_ indices
         DECLARE_ANIM
         #undef _ANIM_NAME_
-        // #define _ANIM_NAME_ indices
-        // DECLARE_ANIM
-        // #undef _ANIM_NAME_
     };
 
 
 #endif
+
+
+
+    //     // ------------------ TEMPLATE ----------------
+    // namespace * {
+    //     const uint8_t NUM_PARAMS = 1;
+    //     enum ParamNames {
+    //         *
+    //     }
+
+    //     // Params Vars
+    //     uint8_t * = 0;
+        
+    //     Parameter params[NUM_PARAMS] = {
+    //         Parameter{CRGB::DarkGray, *} // *
+    //     };
+
+    //     void initAnim(){
+    //     }
+
+    //     void initParam(uint8_t p){
+    //         switch(p){
+    //             case *:
+    //                 drawScale.init(drawScale.OFF);
+    //                 break;
+    //         }
+    //     }
+
+    //     void adjParam(uint8_t param, bool up){
+    //         switch(param){
+    //             case *:
+    //                 * += INCDEC;
+    //                 #ifdef DEBUG
+    //                 Serial.printf(" %d\n", *);
+    //                 #endif
+    //                 break;
+    //         }
+    //     }
+
+    //     void drawFrame(){
+    //         FastLED.clear();
+    //         for(int i = 0; i< NUM_LEDS; i++){
+    //     }
+    // }

@@ -25,7 +25,7 @@
 
 // Parameters
 #define INIT_BRIGHTNESS   10
-#define INIT_SPEED        128
+#define INIT_SPEED        30
 #define BRIGH_ADJ_MULT    3
 #define SPEED_ADJ_MULT    3
 #define SPEED_REDUCTION_FACTOR    2
@@ -59,7 +59,8 @@ enum States {
   HOME,
   EDIT_DELAY,
   EDIT
-} state = HOME;
+};
+States state = HOME;
 bool blinkState = true;
 uint8_t blinkStep = BLINK_STEPS;
 uint8_t currParamIdx = 0;
@@ -107,8 +108,10 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
+  
 
-  changeState(EDIT);
+
+  //changeState(EDIT);
   currParamIdx = 3;
   initParam();
   #endif
@@ -119,7 +122,8 @@ void setup() {
 
   Timer1.initialize(1000000 / FPS);
   Timer1.attachInterrupt(frameInt);
-  Timer3.initialize(1000000 / ANIM_STEPPER_FREQ);
+  //Timer3.initialize(1000000 / ANIM_STEPPER_FREQ);
+  Timer3.initialize((1000000 * SPEED_REDUCTION_FACTOR) / speed);
   Timer3.attachInterrupt(stepAnimationInt);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), debounceButton, CHANGE);
@@ -196,9 +200,9 @@ void initParam(){
     blinkState = true;
     blinkStep = BLINK_STEPS;
     if(currParamIdx < NUM_GLOBAL_PARAMS){
-      ticksToAdjust = globalParams[currParamIdx].ticksToAdjust;
+      ticksToAdjust = globalParams[currParamIdx].ticksToAdjust;// || 4;
     } else {
-      ticksToAdjust = ANIM.paramList[animParamIdx].ticksToAdjust;
+      ticksToAdjust = ANIM.paramList[animParamIdx].ticksToAdjust;// || 4;
     }
 
     switch (currParamIdx)
@@ -320,8 +324,6 @@ void loop() {
       changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME state
     } else {      
       int8_t newPosition = encoder.read();
-
-      // TODO: check if encoder was rotated enough to trigger parameter update
       if (abs8(newPosition) >= ticksToAdjust) {
         changeValue(newPosition >= ticksToAdjust);
         encoder.write(0);
@@ -354,17 +356,3 @@ void loop() {
     #endif
   }
 }
-
-// -----------------------------------------------------
-
-
-
-
-
-
-/*
-button press changes animation
-Hold button for x seconds to enter settings mode
-
-wait y seconds to exit settings mode;
-*/
