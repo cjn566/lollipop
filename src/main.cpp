@@ -42,13 +42,33 @@
 #define ENC_TICKS_PER_INDENT   4
 
 // Macros
-#define ANIM animations[$.anim]
 #define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
 #define animParamIdx (currParamIdx - NUM_GLOBAL_PARAMS)
 
 //          VARIABLES AND STUFF
 // Hardware
 Encoder encoder(ENCODER_A, ENCODER_B);
+
+
+
+// create 1 instance of the global state stuff
+state_t globalState;
+
+
+// create instance of the animation classes
+
+Peppermint pepermint1(2, 5);
+Peppermint pepermint2(3, 8);
+Peppermint pepermint3(1, 2);
+
+AnimationBase *animations[NUM_ANIMS] = {
+	&pepermint1,
+	&pepermint2,
+	&pepermint3,
+};
+
+#define ANIM (*animations[globalState.anim])
+
 
 // Settings
 uint8_t brightness = INIT_BRIGHTNESS;
@@ -129,7 +149,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), debounceButton, CHANGE);
 
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_MILLIAMPS);
-  FastLED.addLeds<WS2812B, LED_DATA, ORDER>($.leds, NUM_LEDS);
+  FastLED.addLeds<WS2812B, LED_DATA, ORDER>(globalState.leds, NUM_LEDS);
   FastLED.setBrightness(INIT_BRIGHTNESS);
 
   ANIM.initAnim();
@@ -143,11 +163,11 @@ enum GlobalParams {
   SPEED,
   SATURATION
 };
-Parameter globalParams[NUM_GLOBAL_PARAMS] = {
-  Parameter{CRGB::Crimson, 4}, // Brightness
-  Parameter{CRGB::White, 2},   // Speed
-  Parameter{CRGB::DarkGray, 2} // Saturation
-};
+//Parameter globalParams[NUM_GLOBAL_PARAMS] = {
+//  Parameter{CRGB::Crimson, 4}, // Brightness
+//  Parameter{CRGB::White, 2},   // Speed
+//  Parameter{CRGB::DarkGray, 2} // Saturation
+//};
 
 void changeValue(bool up){
   
@@ -159,7 +179,7 @@ void changeValue(bool up){
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
-      drawScale.setValue( brightness >> 4 ) ;
+      //drawScale.setValue( brightness >> 4 ) ;
 
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
@@ -172,18 +192,18 @@ void changeValue(bool up){
       } else {
         Timer3.setPeriod((1000000 * SPEED_REDUCTION_FACTOR) / speed);
       }
-      drawScale.setValue(speed >> 4);
+      //drawScale.setValue(speed >> 4);
 
       #ifdef DEBUG
       Serial.printf("speed = %d\n", speed);
       #endif
       break;
     case SATURATION:
-      $.saturation = CLAMP_8($.saturation + INCDEC);
-      drawScale.setValue($.saturation >> 4);
+      globalState.saturation = CLAMP_8(globalState.saturation + INCDEC);
+      //drawScale.setValue(globalState.saturation >> 4);
 
       #ifdef DEBUG
-      Serial.printf("Saturation = %d\n", $.saturation);
+      Serial.printf("Saturation = %d\n", globalState.saturation);
       #endif
       break;
     default:
@@ -200,21 +220,21 @@ void initParam(){
     blinkState = true;
     blinkStep = BLINK_STEPS;
     if(currParamIdx < NUM_GLOBAL_PARAMS){
-      ticksToAdjust = globalParams[currParamIdx].ticksToAdjust;// || 4;
+      //ticksToAdjust = globalParams[currParamIdx].ticksToAdjust;// || 4;
     } else {
-      ticksToAdjust = ANIM.paramList[animParamIdx].ticksToAdjust;// || 4;
+      //ticksToAdjust = ANIM.paramList[animParamIdx].ticksToAdjust;// || 4;
     }
 
     switch (currParamIdx)
     {
       case BRIGHTNESS:
-        drawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
+        //drawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
         break;
       case SPEED:
-        drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
+        //drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
         break;
       case SATURATION:
-        drawScale.init(drawScale.NOSIGN, $.saturation >> 4, CRGB::Blue);
+        //drawScale.init(drawScale.NOSIGN, globalState.saturation >> 4, CRGB::Blue);
         break;
       default:
         ANIM.initParam(animParamIdx);
@@ -254,14 +274,14 @@ void handleButton(){
       break;
     case EDIT_DELAY:    // Start a new animation
       if(!isPressed){
-        $.anim = ($.anim + 1) % NUM_ANIMS;
+        globalState.anim = (globalState.anim + 1) % NUM_ANIMS;
         ANIM.initAnim();
         changeState(HOME);
       }
       break;
     case EDIT:
       if(isPressed){    // Change parameter to Edit
-        currParamIdx = addmod8(currParamIdx, (uint8_t)1, (uint8_t)(NUM_GLOBAL_PARAMS + ANIM.numParams));
+        //currParamIdx = addmod8(currParamIdx, (uint8_t)1, (uint8_t)(NUM_GLOBAL_PARAMS + ANIM.numParams));
         initParam();
       }
       break;
@@ -275,21 +295,23 @@ void doFrame(){
   Serial.print("f");
   #endif
   if(state == EDIT){
-    drawScale.draw();
-    $.leds(0, (NUM_GLOBAL_PARAMS + ANIM.numParams - 1)) = CRGB::LightSeaGreen;
+    //drawScale.draw();
+	// this tries to read "numParams" -- normally you would provide a function
+	// in the class which allows stuff outside the class to get the internal state
+    //globalState.leds(0, (NUM_GLOBAL_PARAMS + ANIM.numParams - 1)) = CRGB::LightSeaGreen;
     if(!speed){
-      $.leds[currParamIdx] = CRGB::Red;
+      globalState.leds[currParamIdx] = CRGB::Red;
     }
     else if(blinkState){
-      $.leds[currParamIdx] = CRGB::Green;
+      globalState.leds[currParamIdx] = CRGB::Green;
     }
     else {
-      $.leds[currParamIdx] = CRGB::Black;
+      globalState.leds[currParamIdx] = CRGB::Black;
     }
   }
   FastLED.show();
   ANIM.drawFrame();
-  $.stepsSinceLastFrame = 0;
+  globalState.stepsSinceLastFrame = 0;
 }
 
 void stepAnimation(){
@@ -298,7 +320,7 @@ void stepAnimation(){
     blinkState = !blinkState;
   }
 
-  $.stepsSinceLastFrame++;
+  globalState.stepsSinceLastFrame++;
 
   #ifdef TIMING
   Serial.print(".");
