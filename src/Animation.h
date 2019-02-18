@@ -333,7 +333,7 @@
         virtual void drawFrame() =0;
     };
 
-    static struct Peppermint : AnimationBase{
+    static struct Peppermint : public AnimationBase{
         static const uint8_t NUM_PARAMS = 2;
         virtual void initAnim();
         virtual void initParam(uint8_t p);
