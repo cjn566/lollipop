@@ -159,7 +159,6 @@ void changeValue(bool up){
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
-      drawScale.setValue( brightness >> 4 ) ;
 
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
@@ -172,7 +171,6 @@ void changeValue(bool up){
       } else {
         Timer3.setPeriod((1000000 * SPEED_REDUCTION_FACTOR) / speed);
       }
-      drawScale.setValue(speed >> 4);
 
       #ifdef DEBUG
       Serial.printf("speed = %d\n", speed);
@@ -180,7 +178,6 @@ void changeValue(bool up){
       break;
     case SATURATION:
       $.saturation = CLAMP_8($.saturation + INCDEC);
-      drawScale.setValue($.saturation >> 4);
 
       #ifdef DEBUG
       Serial.printf("Saturation = %d\n", $.saturation);
@@ -208,13 +205,10 @@ void initParam(){
     switch (currParamIdx)
     {
       case BRIGHTNESS:
-        drawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
         break;
       case SPEED:
-        drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
         break;
       case SATURATION:
-        drawScale.init(drawScale.NOSIGN, $.saturation >> 4, CRGB::Blue);
         break;
       default:
         ANIM.initParam(animParamIdx);
@@ -275,7 +269,6 @@ void doFrame(){
   Serial.print("f");
   #endif
   if(state == EDIT){
-    drawScale.draw();
     $.leds(0, (NUM_GLOBAL_PARAMS + ANIM.numParams - 1)) = CRGB::LightSeaGreen;
     if(!speed){
       $.leds[currParamIdx] = CRGB::Red;

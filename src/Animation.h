@@ -100,18 +100,11 @@
 
     // This is the array of animations that the main program cycles through
     // ------------------ COLLECTION ----------------
-    #define NUM_ANIMS           3
+    #define NUM_ANIMS           1
     #define DECLARE_ANIM        Animation(_ANIM_NAME_::NUM_PARAMS, _ANIM_NAME_::params, _ANIM_NAME_::initAnim, _ANIM_NAME_::initParam, _ANIM_NAME_::adjParam, _ANIM_NAME_::drawFrame),
     Animation animations[NUM_ANIMS] = {
-        #define _ANIM_NAME_ peppermint
-        DECLARE_CLASS_ANIM
-        #undef _ANIM_NAME_
-        #define _ANIM_NAME_ rainbow
+        #define _ANIM_NAME_ gradient
         DECLARE_ANIM
-        #undef _ANIM_NAME_
-        #define _ANIM_NAME_ indices
-        DECLARE_ANIM
-        #undef _ANIM_NAME_
     };
 
 
