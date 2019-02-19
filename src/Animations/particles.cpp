@@ -71,11 +71,122 @@
 // 	}
 // }
 
+// ------------------ Particles ----------------
+    // namespace gradient {
+    //     const uint8_t NUM_PARAMS = 2;
+    //     // Params Vars
+    //     uint8_t stretch = 1;
+    //     uint8_t baseHue = 0;
+        
+    //     Parameter params[NUM_PARAMS] = {
+    //         Parameter{CRGB::DarkGray, 2},   // Stretch
+    //         Parameter{CRGB::DarkGray, 4},   // Hue
+    //     };
+
+    //     struct Particle {
+    //         uint16_t location;
+    //         fract16 acceleration;
+    //         uint16_t velocity;
+    //         CRGB color;
+    //     } particles[200];
+
+    //     // Step Vars
+    //     uint8_t currHue = 0;
+
+    //     void initAnim(){
+    //     }
+
+    //     void initParam(uint8_t p){
+    //         switch(p){
+    //             case 0: // Stretch
+    //                 drawScale.init(drawScale.NOSIGN, (stretch >> 4));
+    //                 break;
+    //             case 1: // Hue
+    //                 drawScale.init(drawScale.OFF);
+    //                 break;
+    //         }
+    //     }
+
+    //     void adjParam(uint8_t param, bool up){
+    //         switch(param){
+    //             case 0:
+    //                 stretch = CLAMP_8(stretch + INCDEC);
+    //                 drawScale.setValue((stretch >> 4));
+
+    //                 #ifdef DEBUG
+    //                 Serial.printf("Stretch: %d\n", (uint8_t)stretch);
+    //                 #endif
+    //                 break;
+    //             case 1:
+    //                 baseHue += INCDEC;
+    //                 break;
+    //         }
+    //     }
+
+    //     void drawFrame(){
+    //         FastLED.clear();
+    //         currHue += $.stepsSinceLastFrame;
+    //         CHSV first =  CHSV(baseHue + currHue, $.saturation, 255);
+    //         CHSV second = CHSV(baseHue + currHue + stretch, $.saturation, 255);
+    //         fill_gradient<CRGB>($.leds, (uint16_t)NUM_LEDS, first, second, FORWARD_HUES);
+    //     }
+    // }
 
 
 
+#pragma once
 
+// #include "../Animation.h"
+// #include "util.h"
+// //#include "radii.h"
 
+// struct *: public AnimationBase{
+
+//     #define * 5
+//     enum ParamName {
+//         SPOKE,
+//     };
+
+//     // params vars
+//     uint8_t * = 3;
+
+//     // state vars
+//     uint8_t * = 0;
+
+//     public:
+//     *(){
+//         numParams = *;
+//         params = new parameter_t[numParams];
+//         params[*] = {CRGB::Red, 4};
+//     };
+
+//     void initAnim(){
+//     }
+
+//     void initParam(uint8_t paramIdx){
+//         switch(paramIdx){
+//             case *:
+//                 break;
+//         }
+//     }
+
+//     void adjParam(uint8_t paramIdx, bool up){
+//         switch(paramIdx){
+//             case *:
+//                 * += INCDEC;
+//                 break;
+//         }
+//     }
+
+//     void drawFrame(uint8_t stepsSinceLastFrame){
+//         #ifdef DEBUG
+//         //Serial.println();
+//         #endif
+//         for(int i=0;i< NUM_LEDS ;i++){
+//             ledData.leds[i] = 
+//         }
+//     }
+// };
 
 
 

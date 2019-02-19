@@ -1,86 +1,51 @@
-// 
- #define DEBUG
- // #define TIMING
-
-
 #include <Arduino.h>
 #include <Encoder.h>
 #include <TimerOne.h>
 #include <TimerThree.h>
 #include "Animation.h"
 #include "util.h"
+#include "settings.h"
 
-//          SETTINGS
-// Pins
-#define ENCODER_A     23
-#define ENCODER_B     22
-#define ENCODER_BTN   4
-#define LED_DATA      17
-
-// UI Timing
-#define DEBOUNCE_MILLIS       50
-#define EDIT_HOLD_MILLIS      700
-#define EDIT_TIMEOUT_MILLIS   4000
-#define BLINK_STEPS           FREQ_TO_STEPS(3)
-
-// parameter_ts
-#define INIT_BRIGHTNESS   10
-#define INIT_SPEED        30
-#define BRIGH_ADJ_MULT    3
-#define SPEED_ADJ_MULT    3
-#define SPEED_REDUCTION_FACTOR    2
-#define BRIGHT_MACRO_ADJ_THRESH    50
-
-
-// Video
-#define FPS                 60
-#define ANIM_STEPPER_FREQ   100
-
-// Misc
-#define MAX_MILLIAMPS          1500
-#define STARTUP_DELAY          1000
-#define ENC_TICKS_PER_INDENT   4
-
-// Macros
-#define FREQ_TO_STEPS(f) (ANIM_STEPPER_FREQ / f)
-#define animParamIdx (currParamIdx - NUM_GLOBAL_PARAMS)
-
-//          VARIABLES AND STUFF
 // Hardware
 Encoder encoder(ENCODER_A, ENCODER_B);
 
-// Settings
+// Parameters
 uint8_t brightness = INIT_BRIGHTNESS;
 uint8_t speed = INIT_SPEED;
 
 // State
-enum States {
+enum UI_State {
   HOME,
   EDIT_DELAY,
   EDIT
 };
 
 volatile uint8_t v_stepsSinceLastFrame = 0;
-States state = HOME;
+UI_State ui_state = HOME;
 bool blinkState = true;
 uint8_t blinkStep = BLINK_STEPS;
 uint8_t currParamIdx = 0;
+DrawScale drawScale;
+state_t ledData;
 
-
-#define NUM_ANIMATIONS 1
-uint8_t currAnimationIdx = 0;
+// -------- ANIMATIONS ---------------
+#define NUM_ANIMATIONS 3
 #include "Animations/peppermint.cpp"
+#include "Animations/rainbow.cpp"
+#include "Animations/indices.cpp"
+
 Peppermint peppermint = Peppermint();
+Rainbow rainbow = Rainbow();
+Indices indices = Indices();
+
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
-  &peppermint
+  &peppermint,
+  &rainbow,
+  &indices
 };
 #define CURR_ANIM allAnims[currAnimationIdx]
+uint8_t currAnimationIdx = 0;
 
-
-
-
-
-state_t ledData;
 
 //-------------- INTERRUPT HANDLERS -------------------------
 
@@ -112,16 +77,14 @@ void debounceButton(){
 }
 
 //-------------- SETUP -------------------------
-void changeState(States);
+void changeState(UI_State);
 void initParam();
 
 void setup() {
   #ifdef DEBUG
   Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-
-  
+  digitalWrite(LED_BUILTIN, HIGH);  
 
 
   //changeState(EDIT);
@@ -135,7 +98,6 @@ void setup() {
 
   Timer1.initialize(1000000 / FPS);
   Timer1.attachInterrupt(frameInt);
-  //Timer3.initialize(1000000 / ANIM_STEPPER_FREQ);
   Timer3.initialize((1000000 * SPEED_REDUCTION_FACTOR) / speed);
   Timer3.attachInterrupt(stepAnimationInt);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
@@ -172,7 +134,7 @@ void changeValue(bool up){
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH)? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
-      //drawScale.setValue( brightness >> 4 ) ;
+      drawScale.setValue( brightness >> 4 ) ;
 
       #ifdef DEBUG
       Serial.printf("Brightness = %d\n", brightness);
@@ -185,7 +147,7 @@ void changeValue(bool up){
       } else {
         Timer3.setPeriod((1000000 * SPEED_REDUCTION_FACTOR) / speed);
       }
-      //drawScale.setValue(speed >> 4);
+      drawScale.setValue(speed >> 4);
 
       #ifdef DEBUG
       Serial.printf("speed = %d\n", speed);
@@ -193,7 +155,7 @@ void changeValue(bool up){
       break;
     case SATURATION:
       ledData.saturation = CLAMP_8(ledData.saturation + INCDEC);
-      //drawScale.setValue(ledData.saturation >> 4);
+      drawScale.setValue(ledData.saturation >> 4);
 
       #ifdef DEBUG
       Serial.printf("Saturation = %d\n", ledData.saturation);
@@ -221,13 +183,13 @@ void initParam(){
     switch (currParamIdx)
     {
       case BRIGHTNESS:
-        //rawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
+        drawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
         break;
       case SPEED:
-        //drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
+        drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
         break;
       case SATURATION:
-        //drawScale.init(drawScale.NOSIGN, ledData.saturation >> 4, CRGB::Blue);
+        drawScale.init(drawScale.NOSIGN, ledData.saturation >> 4, CRGB::Blue);
         break;
       default:
         CURR_ANIM->initParam(animParamIdx);
@@ -235,7 +197,7 @@ void initParam(){
     }
 }
 
-void changeState(States newState){
+void changeState(UI_State newState){
   switch(newState){
     case EDIT:
       initParam();
@@ -243,10 +205,10 @@ void changeState(States newState){
     default:
       break;
   }
-  state = newState;
+  ui_state = newState;
   
   #ifdef DEBUG
-  Serial.printf("\nstate = %d\n", state);
+  Serial.printf("\nui_state = %d\n", ui_state);
   #endif
 }
 
@@ -257,7 +219,7 @@ void handleButton(){
   interrupts();
   bool isPressed = !digitalRead(ENCODER_BTN);
 
-  switch (state)
+  switch (ui_state)
   {    
     case HOME:
       if(isPressed){
@@ -288,7 +250,7 @@ void doFrame(){
   CURR_ANIM->drawFrame(v_stepsSinceLastFrame);
 
   // TODO this:
-  if((state == EDIT) && ((blinkStep -= v_stepsSinceLastFrame) <= 0)){
+  if((ui_state == EDIT) && ((blinkStep -= v_stepsSinceLastFrame) <= 0)){
     blinkStep = BLINK_STEPS;
     blinkState = !blinkState;
   }
@@ -296,8 +258,8 @@ void doFrame(){
   #ifdef TIMING
   Serial.print("f");
   #endif
-  if(state == EDIT){
-    //drawScale.draw();
+  if(ui_state == EDIT){
+    drawScale.draw();
     ledData.leds(0, (NUM_GLOBAL_PARAMS + CURR_ANIM->getNumParams() - 1)) = CRGB::LightSeaGreen;
     if(!speed){
       ledData.leds[currParamIdx] = CRGB::Red;
@@ -320,15 +282,15 @@ void loop() {
     v_debouncing = false;
     handleButton();
   }
-  if(state == EDIT_DELAY){
+  if(ui_state == EDIT_DELAY){
     if((millis() - edit_delay_start_millis) > EDIT_HOLD_MILLIS){ 
       //Held down button long enough to enter EDIT mode
       changeState(EDIT);
     }
   }
-  if(state == EDIT){    
+  if(ui_state == EDIT){    
     if((millis() - lastActivityMillis) > EDIT_TIMEOUT_MILLIS){
-      changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME state
+      changeState(HOME);    // Edit mode has timed out (no activity), so return to HOME ui_state
     } else {      
       int8_t newPosition = encoder.read();
       if (abs8(newPosition) >= ticksToAdjust) {
