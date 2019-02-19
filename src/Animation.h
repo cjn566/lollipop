@@ -1,68 +1,52 @@
 #ifndef ANIMATION_H
     #define ANIMATION_H
-
-    #include "FastLED.h"
     
-    #define NUM_ANIMS           2
-    #define NUM_LEDS            185
+    #include "FastLED.h"
+
+    #define NUM_LEDS            204
     #define ORDER               GRB
+    
 
-    struct {
-        uint8_t anim = 0;
-        uint8_t hue = 0;
-        uint8_t stepsSinceLastFrame = 0;
+    typedef struct state_struct      state_t;
+    typedef struct parameter_struct  parameter_t;
+
+    struct state_struct {
+        uint8_t saturation = 255;    
         CRGBArray<NUM_LEDS> leds;
+    };
 
-        uint8_t u8_1, u8_2;
-        int optInt;
-        long optLong;
-        float optFloat;
+    extern state_t ledData;
 
-        void clear(){
-            u8_1 = 0;
-            u8_2 = 0;
-            optInt = 0;
-            optLong = 0;
-            optFloat = 0;
-        }
-    } $;
+    struct parameter_struct {
+        CRGB backgroundColor;
+        uint8_t ticksToAdjust;
+    };
 
-    struct Animation {
-        void (*init)();
-        void (*drawFrame)();
-        Animation(void (*init)(), void (*df)()) : 
-            init(init), 
-            drawFrame(df) 
-            {}
+    struct AnimationBase {
+        uint8_t numParams;
+        parameter_t *params;
+        AnimationBase(){};
+        virtual uint8_t     getNumParams(){return numParams;};
+        virtual parameter_t getParam(uint8_t paramIdx){return params[paramIdx];};
+        virtual void        initAnim(){};
+        virtual void        initParam(uint8_t paramIdx){};
+        virtual void        adjParam(uint8_t paramIdx, bool up)     =0;
+        virtual void        drawFrame(uint8_t)                      =0;
     };
 
 
-    // ------------------ SOLID ----------------
-    void testInit(){
-        $.clear();
-    }
-    void testDrawFrame(){
-        $.leds(0, NUM_LEDS) = CHSV($.hue, 255,255);
-    }
-
-
-    // ------------------ RAINBOW ----------------
-    #define RAINBOW_TOP 255
-    void rainbowInit(){
-        $.clear();
-
-    }
-    void rainbowDraw(){
-        FastLED.clear();
-        $.u8_1 += $.stepsSinceLastFrame;
-        fill_rainbow($.leds, NUM_LEDS, $.hue + $.u8_1, 255);
-    }
-
-    // ------------------ COLLECTION ----------------
-    Animation animations[NUM_ANIMS] = {
-        Animation(testInit, testDrawFrame), 
-        Animation(rainbowInit, rainbowDraw)
+    class DrawScale {
+        public:
+        enum Mode {
+            OFF,
+            NOSIGN,
+            SIGN
+        };
+        void setValue(int);
+        void init(Mode, int nMax = 256, int val = 0, CRGB = CRGB::White);        
+        void draw();
     };
 
+    extern DrawScale drawScale;
 
 #endif
