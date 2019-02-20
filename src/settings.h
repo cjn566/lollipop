@@ -31,5 +31,3 @@
 #define STARTUP_DELAY          1000
 #define ENC_TICKS_PER_INDENT   4
 
-// Macros
-#define animParamIdx (currParamIdx - NUM_GLOBAL_PARAMS)

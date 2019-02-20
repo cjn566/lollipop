@@ -37,13 +37,8 @@
 
     class DrawScale {
         public:
-        enum Mode {
-            OFF,
-            NOSIGN,
-            SIGN
-        };
         void setValue(int);
-        void init(Mode, int nMax = 256, int val = 0, CRGB = CRGB::White);        
+        void init(bool isActive, int nMax = 256, int val = 0, CRGB = CRGB::White);        
         void draw();
     };
 

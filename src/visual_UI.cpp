@@ -4,11 +4,10 @@
 #define SCALE_HALF_SIZE 8
 #define SCALE_START_IDX (SCALE_POS_MID_IDX - SCALE_HALF_SIZE)
 
-DrawScale::Mode mode = DrawScale::Mode::OFF;
+bool active;
 int pValue;
 int maxVal;
 CRGB onColor = CRGB::Red;
-bool sign;
 
 void drawNoSign(){
     if(pValue) ledData.leds(SCALE_START_IDX, (pValue + SCALE_START_IDX))  = onColor;
@@ -41,15 +40,15 @@ void DrawScale::setValue(int val){
     #endif
 }
 
-void DrawScale::init(Mode nMode, int nMax, int val, CRGB nColor){
+void DrawScale::init(bool isActive, int nMax, int val, CRGB nColor){
+    active = isActive;
     maxVal = nMax;
-    mode = nMode;
     onColor = nColor;
     setValue(val);
 }
 
 void DrawScale::draw(){
-    if(mode != OFF){
+    if(active){
         ledData.leds(SCALE_START_IDX, SCALE_START_IDX + (SCALE_HALF_SIZE*2) - 1) = CRGB::White;
         ledData.leds[SCALE_START_IDX - 1] = CRGB::Black;
         ledData.leds[SCALE_START_IDX + (SCALE_HALF_SIZE*2)] = CRGB::Black;

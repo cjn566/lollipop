@@ -93,7 +93,7 @@
 
                 #ifdef DEBUG
                 if(stepsSinceLastFrame == 1 && i == 120){
-                    Serial.printf("skew: %d, %d\n", top, adjustment);
+                    //Serial.printf("skew: %d, %d\n", top, adjustment);
                 }
                 #endif
                 uint8_t withSkew = angleWithFullHueMultplier + adjustment;
