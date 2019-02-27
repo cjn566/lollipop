@@ -31,23 +31,24 @@ DrawScale drawScale;
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
-#define NUM_ANIMATIONS 4
+#define NUM_ANIMATIONS 3
 #include "Animations/peppermint.cpp"
 #include "Animations/rainbow.cpp"
-#include "Animations/indices.cpp"
+//#include "Animations/indices.cpp"
 #include "Animations/particles.cpp"
 
 
 Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
-Indices indices = Indices();
+//Indices indices = Indices();
 Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
-    &particles,
     &peppermint,
+    &particles,
     &rainbow,
-    &indices};
+    //&indices
+    };
 #define CURR_ANIM allAnims[currAnimationIdx]
 uint8_t currAnimationIdx = 0;
 
