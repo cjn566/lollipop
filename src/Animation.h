@@ -38,7 +38,7 @@
     class DrawScale {
         public:
         void setValue(int);
-        void init(bool isActive, int nMax = 256, int val = 0, CRGB = CRGB::White);        
+        void init(bool isActive, int nMax = 256, int val = 0, CRGB = CRGB::Red);        
         void draw();
     };
 

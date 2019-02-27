@@ -10,7 +10,7 @@ bool active = false;
 int pValue;
 int maxVal;
 uint8_t hueShiftPerVal, valuesPerLed;
-CRGB onColor = CRGB::Red;
+CRGB onColor;
 
 void DrawScale::setValue(int val){
     if(val >= 0){
@@ -40,10 +40,13 @@ void DrawScale::draw(){
 
         int numFullLeds = pValue / valuesPerLed;
         int valuesRem = pValue % valuesPerLed;
+        fract8 blend = (256*valuesRem) / valuesPerLed;
 
         if(pValue > 0){
             ledData.leds(SCALE_START_IDX, SCALE_START_IDX + numFullLeds)  = onColor;
-            if(pValue) ledData.leds(SCALE_START_IDX, (pValue + SCALE_START_IDX))  = onColor;
+            
+            ledData.leds[SCALE_START_IDX + numFullLeds + 1] = ledData.leds[SCALE_START_IDX + numFullLeds + 1].lerp8(onColor, (256*valuesRem) / valuesPerLed);
+            
         } else if(pValue < 0){
 
         }

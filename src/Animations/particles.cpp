@@ -1,192 +1,181 @@
+#include "../Animation.h"
+#include "util.h"
+//#include "radii.h"
 
-// spawn rate 		/ variability
-// spawn velocity 	/ variability
-// acceleration 	/ variability
-// color 			/ variability
-// color cycle rate
+struct Particles: public AnimationBase{
 
-// baseSpawnDelay
+    #define ENDPOINT 193
+    #define MAX_PARTICLES 16
+    #define LOCATION_SHIFT 24
+    #define MAX_LOCATION  (unsigned int)(ENDPOINT << LOCATION_SHIFT)
+    enum ParamName {
+        SPAWN_RATE,
+        SPAWN_RATE_VAR,
+        VELOCITY,
+        VELOCITY_VAR,
+        ACCELERATION,
+        ACCELERATION_VAR,
+        COLOR,
+        COLOR_VAR,
+        COLOR_CYCLE_RATE
+    };
 
+    // params vars
+    uint8_t spawnRate;
+    uint8_t spawnRateVar;
+    int      velocity;
+    uint8_t velocityVar;
+    int      accel;
+    uint8_t accelVar;
+    uint8_t hue;
+    uint8_t hueVar;
+    uint8_t hueCycleRate;
 
-// struct {
-// 	delay;
-// 	velocity;
-// 	acceleration;
-// 	color;
-// } spawn;
+    // state vars
+    uint16_t counter = 0, numParticles = 0, newParticleIdx = 0, spawnDelay;
 
-// uint8_t counter, numParticles, newParticleIdx;
-
-// struct Particle {
-// 	uint16_t location;
-// 	uint16_t velocity;
-// 	fract16 acceleration;
-// 	CRGB color;
-// } particle[MAX_PARTICLES];
-
-// void drawFrame(){	
-// 	// Spawn
-// 	if(numParticles < MAX_PARTICLES){
-// 		counter += $.stepsSinceLastFrame;
-// 		if(counter >= spawnDelay){
-// 			while(particles[newParticleIdx]){	// Find next available slot
-// 				newParticleIdx = qmod(newParticleIdx, 1, MAX_PARTICLES - 1);
-// 			}
-			
-// 			// Build new particle
-// 			Particle p = particle[newParticleIdx];
-// 			p.location = /  beginning or end based on which param? 0 : end
-// 			p.velocity = baseVelocity  + / random variation;
-// 			p.acceleration = baseAcceleration  + / random variation;
-// 			p.color = baseHue  + / random variation;
-			
-			
-// 			// Set up next particle
-// 			counter = 0;
-// 			spawn.delay = baseSpawnDelay + / random variation;
-// 		}
-// 	}
-	
-// 	$leds.clear();
-// 	int i = 0;
-// 	Particle p;
-// 	for (int i = 0; i < MAX_PARTICLES; i++){
-// 		if(particle[i]){
-// 			p = particle[i];
-			
-// 			// draw
-// 			/ spread based on velocity
-// 			$.leds[p.location] += p.color;
-			
-// 			// move
-// 			p.location += p.velocity;
-// 			if(location > maxLocation){
-// 				/ delete p;
-// 			} else {
-// 				p.velocity *= p.acceleration;
-// 			}
-			
-// 			i++;
-// 		}
-// 	}
-// }
-
-// ------------------ Particles ----------------
-    // namespace gradient {
-    //     const uint8_t NUM_PARAMS = 2;
-    //     // Params Vars
-    //     uint8_t stretch = 1;
-    //     uint8_t baseHue = 0;
-        
-    //     Parameter params[NUM_PARAMS] = {
-    //         Parameter{CRGB::DarkGray, 2},   // Stretch
-    //         Parameter{CRGB::DarkGray, 4},   // Hue
-    //     };
-
-    //     struct Particle {
-    //         uint16_t location;
-    //         fract16 acceleration;
-    //         uint16_t velocity;
-    //         CRGB color;
-    //     } particles[200];
-
-    //     // Step Vars
-    //     uint8_t currHue = 0;
-
-    //     void initAnim(){
-    //     }
-
-    //     void initParam(uint8_t p){
-    //         switch(p){
-    //             case 0: // Stretch
-    //                 drawScale.init(drawScale.NOSIGN, (stretch >> 4));
-    //                 break;
-    //             case 1: // Hue
-    //                 drawScale.init(drawScale.OFF);
-    //                 break;
-    //         }
-    //     }
-
-    //     void adjParam(uint8_t param, bool up){
-    //         switch(param){
-    //             case 0:
-    //                 stretch = CLAMP_8(stretch + INCDEC);
-    //                 drawScale.setValue((stretch >> 4));
-
-    //                 #ifdef DEBUG
-    //                 Serial.printf("Stretch: %d\n", (uint8_t)stretch);
-    //                 #endif
-    //                 break;
-    //             case 1:
-    //                 baseHue += INCDEC;
-    //                 break;
-    //         }
-    //     }
-
-    //     void drawFrame(){
-    //         FastLED.clear();
-    //         currHue += $.stepsSinceLastFrame;
-    //         CHSV first =  CHSV(baseHue + currHue, $.saturation, 255);
-    //         CHSV second = CHSV(baseHue + currHue + stretch, $.saturation, 255);
-    //         fill_gradient<CRGB>($.leds, (uint16_t)NUM_LEDS, first, second, FORWARD_HUES);
-    //     }
-    // }
+    struct Particle {
+        unsigned int location;
+        int  velocity;
+        int  acceleration;
+        CRGB color;
+        bool active = false;
+    } particle[MAX_PARTICLES];
 
 
+    public:
+    Particles(){
+        accel    =      0x00000f00;
+        velocity =      0x00100000;
+        spawnDelay = 10;
+        numParams = 9;
+        params = new parameter_t[numParams];
+        //params[*] = {CRGB::Red, 4};
+    };
 
-#pragma once
+    void initAnim(){
+    }
 
-// #include "../Animation.h"
-// #include "util.h"
-// //#include "radii.h"
+    void initParam(ParamName paramIdx){
+        switch(paramIdx){
+            case SPAWN_RATE:
+                break;
+            case SPAWN_RATE_VAR:
+                break;
+            case VELOCITY:
+                break;
+            case VELOCITY_VAR:
+                break;
+            case ACCELERATION:
+                break;
+            case ACCELERATION_VAR:
+                break;
+            case COLOR:
+                break;
+            case COLOR_VAR:
+                break;
+            case COLOR_CYCLE_RATE:
+                break;
+        }
+    }
 
-// struct *: public AnimationBase{
+    void adjParam(uint8_t paramIdx, bool up){
+        switch(paramIdx){
+            case SPAWN_RATE:
+                //* += INCDEC;
+                break;
+            case SPAWN_RATE_VAR:
+                break;
+            case VELOCITY:
+                break;
+            case VELOCITY_VAR:
+                break;
+            case ACCELERATION:
+                break;
+            case ACCELERATION_VAR:
+                break;
+            case COLOR:
+                break;
+            case COLOR_VAR:
+                break;
+            case COLOR_CYCLE_RATE:
+                break;
+        }
+    }
 
-//     #define * 5
-//     enum ParamName {
-//         SPOKE,
-//     };
+    void drawFrame(uint8_t stepsSinceLastFrame){
 
-//     // params vars
-//     uint8_t * = 3;
+        stepsSinceLastFrame = 1;
+        #ifdef DEBUG
+        //Serial.println();
+        #endif
+        FastLED.clear();
 
-//     // state vars
-//     uint8_t * = 0;
+                // Spawn
+        if((stepsSinceLastFrame > 0) && (numParticles < MAX_PARTICLES)){
+            //Serial.printf("counter: %d\t#p: %d\tidx: %d\tstps: %d >>>  ", counter, numParticles, newParticleIdx, stepsSinceLastFrame);
+            counter += stepsSinceLastFrame;
+            if(counter >= spawnDelay){
+                counter -= spawnDelay;
+                while(particle[newParticleIdx].active){	// Find next available slot
+                    newParticleIdx = (newParticleIdx + 1) % MAX_PARTICLES;
+                }
+                // Build new particle
+                numParticles++;
+                Particle *p = &particle[newParticleIdx];
+                p->active = true;
+                p->location = velocity > 0? 0 : MAX_LOCATION;//  beginning or end based on vel? 0 : end
+                p->velocity = velocity  + 0;// random variation;
+                p->acceleration = accel  + 0;// random variation;
+                p->color = hue;// random variation;
+                hue += 16;
+                
+                Serial.print('C');
+                // Set up next particle
+            }
+        }
 
-//     public:
-//     *(){
-//         numParams = *;
-//         params = new parameter_t[numParams];
-//         params[*] = {CRGB::Red, 4};
-//     };
+        Particle *p;
+        for (int i = 0; i < MAX_PARTICLES; i++){
+                //Serial.print(particle[i].active? 'p':'-');
+            if(particle[i].active){
+                p = &particle[i];
+                
+                
+                // draw
+                // spread based on velocity
+                uint8_t leftPx = p->location >> LOCATION_SHIFT;
+                unsigned int leftVal = p->location & 0x00FFFFFF;
+                // uint8_t rightVal = 0xFF - leftVal;
 
-//     void initAnim(){
-//     }
+                Serial.printf("idx: %d\tlp: %d\tlv: %d\n", i, leftPx, leftVal);//, rightVal);
 
-//     void initParam(uint8_t paramIdx){
-//         switch(paramIdx){
-//             case *:
-//                 break;
-//         }
-//     }
+                ledData.leds[leftPx] = CHSV(p->color, ledData.saturation, 255);//leftVal);
+                // if(leftPx < (NUM_LEDS - 1)){
+                //     ledData.leds[leftPx + 1] = CHSV(p->color, ledData.saturation, rightVal);
+                // }
+                
+                if(stepsSinceLastFrame){
+                    // move
+                    // Location is += t*velocity
+                    p->location += (p->velocity * stepsSinceLastFrame) ;
+                    if(p->location > MAX_LOCATION || p->location < 1){
+                        p->active = false;
+                        numParticles--;
+                        Serial.print("deleted");
+                    } else {
+                        p->velocity += (p->acceleration * stepsSinceLastFrame);
+                        Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
+                    }
 
-//     void adjParam(uint8_t paramIdx, bool up){
-//         switch(paramIdx){
-//             case *:
-//                 * += INCDEC;
-//                 break;
-//         }
-//     }
-
-//     void drawFrame(uint8_t stepsSinceLastFrame){
-//         #ifdef DEBUG
-//         //Serial.println();
-//         #endif
-//         for(int i=0;i< NUM_LEDS ;i++){
-//             ledData.leds[i] = 
-//         }
-//     }
-// };
+                    
+                    // Serial.printf("idx: %d\ta: %d\tv: %d\tp: %d\n", i, p->acceleration, p->velocity, p->location);
+                }
+            }
+        }
+        Serial.println();
+    }
+};
 
 
 

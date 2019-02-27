@@ -31,16 +31,19 @@ DrawScale drawScale;
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
-#define NUM_ANIMATIONS 3
+#define NUM_ANIMATIONS 4
 #include "Animations/peppermint.cpp"
 #include "Animations/rainbow.cpp"
 #include "Animations/indices.cpp"
+#include "Animations/particles.cpp"
 
 Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
 Indices indices = Indices();
+Particles particles = Particles();
 
-AnimationBase *allAnims[NUM_ANIMATIONS] = {
+AnimationBase *allAnims[NUM_ANIMATIONS-1] = {
+    //&particles,
     &peppermint,
     &rainbow,
     &indices};
@@ -137,17 +140,17 @@ void changeValue(bool up)
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH) ? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
-      //drawScale.setValue(brightness >> 4);
+      drawScale.setValue(brightness);
       break;
     case SPEED:
       speed = CLAMP_8(speed + INCDEC);
       if(!speed)  Timer3.stop();
       else        Timer3.setPeriod((1000000 * SPEED_REDUCTION_FACTOR) / speed);
-      //drawScale.setValue(speed >> 4);
+      drawScale.setValue(speed);
       break;
     case SATURATION:
       ledData.saturation = CLAMP_8(ledData.saturation + INCDEC);
-      //drawScale.setValue(ledData.saturation >> 4);
+      drawScale.setValue(ledData.saturation);
     }
   }
   else CURR_ANIM->adjParam(animParamIdx, up);
@@ -164,13 +167,13 @@ void initParam()
     switch (globParamIdx)
     {
     case BRIGHTNESS:
-      //drawScale.init(drawScale.NOSIGN, brightness >> 4, CRGB::Gold);
+      drawScale.init(true, 256, brightness, CRGB::Gold);
       break;
     case SPEED:
-      //drawScale.init(drawScale.NOSIGN, speed >> 4, CRGB::Green);
+      drawScale.init(true, 256, speed, CRGB::Green);
       break;
     case SATURATION:
-      //drawScale.init(drawScale.NOSIGN, ledData.saturation >> 4, CRGB::Blue);
+      drawScale.init(true, 256, ledData.saturation, CRGB::Blue);
       break;
     }
   }
