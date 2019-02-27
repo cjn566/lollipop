@@ -37,13 +37,14 @@ state_t ledData;
 #include "Animations/indices.cpp"
 #include "Animations/particles.cpp"
 
+
 Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
 Indices indices = Indices();
 Particles particles = Particles();
 
-AnimationBase *allAnims[NUM_ANIMATIONS-1] = {
-    //&particles,
+AnimationBase *allAnims[NUM_ANIMATIONS] = {
+    &particles,
     &peppermint,
     &rainbow,
     &indices};

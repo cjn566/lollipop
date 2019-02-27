@@ -5,7 +5,7 @@
 struct Particles: public AnimationBase{
 
     #define ENDPOINT 193
-    #define MAX_PARTICLES 16
+    #define MAX_PARTICLES 30
     #define LOCATION_SHIFT 24
     #define MAX_LOCATION  (unsigned int)(ENDPOINT << LOCATION_SHIFT)
     enum ParamName {
@@ -27,26 +27,30 @@ struct Particles: public AnimationBase{
     uint8_t velocityVar;
     int      accel;
     uint8_t accelVar;
-    uint8_t hue;
+    uint8_t hue = 0;
     uint8_t hueVar;
     uint8_t hueCycleRate;
 
     // state vars
     uint16_t counter = 0, numParticles = 0, newParticleIdx = 0, spawnDelay;
-
+    
+    /*
+    [-pos-10-][-hue-8][]
+    00000000000000000000000000000000
+    */
     struct Particle {
         unsigned int location;
         int  velocity;
         int  acceleration;
-        CRGB color;
+        uint8_t hue;
         bool active = false;
     } particle[MAX_PARTICLES];
 
 
     public:
     Particles(){
-        accel    =      0x00000f00;
-        velocity =      0x00100000;
+        accel    =      0x00004000;
+        velocity =      0x00030000;
         spawnDelay = 10;
         numParams = 9;
         params = new parameter_t[numParams];
@@ -127,10 +131,10 @@ struct Particles: public AnimationBase{
                 p->location = velocity > 0? 0 : MAX_LOCATION;//  beginning or end based on vel? 0 : end
                 p->velocity = velocity  + 0;// random variation;
                 p->acceleration = accel  + 0;// random variation;
-                p->color = hue;// random variation;
-                hue += 16;
+                p->hue = hue;// random variation;
+                hue += 8;
                 
-                Serial.print('C');
+                //Serial.printf("hue: %d\n", hue);
                 // Set up next particle
             }
         }
@@ -148,9 +152,9 @@ struct Particles: public AnimationBase{
                 unsigned int leftVal = p->location & 0x00FFFFFF;
                 // uint8_t rightVal = 0xFF - leftVal;
 
-                Serial.printf("idx: %d\tlp: %d\tlv: %d\n", i, leftPx, leftVal);//, rightVal);
-
-                ledData.leds[leftPx] = CHSV(p->color, ledData.saturation, 255);//leftVal);
+                //Serial.printf("idx: %d\tlp: %d\tlv: %d\n", i, leftPx, leftVal);//, rightVal);
+                //Serial.printf("color: %d\n", p->hue);
+                ledData.leds[leftPx] = CHSV(p->hue, ledData.saturation, 255);//leftVal);
                 // if(leftPx < (NUM_LEDS - 1)){
                 //     ledData.leds[leftPx + 1] = CHSV(p->color, ledData.saturation, rightVal);
                 // }
@@ -162,10 +166,10 @@ struct Particles: public AnimationBase{
                     if(p->location > MAX_LOCATION || p->location < 1){
                         p->active = false;
                         numParticles--;
-                        Serial.print("deleted");
+                        //Serial.print("deleted");
                     } else {
                         p->velocity += (p->acceleration * stepsSinceLastFrame);
-                        Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
+                        //Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
                     }
 
                     
@@ -173,7 +177,7 @@ struct Particles: public AnimationBase{
                 }
             }
         }
-        Serial.println();
+        //Serial.print(".");
     }
 };
 

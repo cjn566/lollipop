@@ -40,7 +40,6 @@ void DrawScale::draw(){
 
         int numFullLeds = pValue / valuesPerLed;
         int valuesRem = pValue % valuesPerLed;
-        fract8 blend = (256*valuesRem) / valuesPerLed;
 
         if(pValue > 0){
             ledData.leds(SCALE_START_IDX, SCALE_START_IDX + numFullLeds)  = onColor;
