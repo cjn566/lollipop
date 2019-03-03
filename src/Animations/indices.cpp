@@ -29,7 +29,7 @@ struct Indices : public AnimationBase{
         }
     }
 
-    void drawFrame(uint8_t stepsSinceLastFrame){
+    void drawFrame(uint8_t millisSinceLastFrame){
         FastLED.clear();
         ledData.leds[index] = CRGB::White;
     }

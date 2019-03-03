@@ -72,13 +72,13 @@
             }
         }
 
-        void drawFrame(uint8_t stepsSinceLastFrame){
+        void drawFrame(uint8_t millisSinceLastFrame){
 
             #ifdef DEBUG
             //Serial.println();
             #endif
 
-            currAngle = mod8(currAngle + stepsSinceLastFrame, angleBetweenSpokes);
+            currAngle = mod8(currAngle + millisSinceLastFrame, angleBetweenSpokes);
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
@@ -92,7 +92,7 @@
                 int adjustment = top >> 5;
 
                 #ifdef DEBUG
-                if(stepsSinceLastFrame == 1 && i == 120){
+                if(millisSinceLastFrame == 1 && i == 120){
                     //Serial.printf("skew: %d, %d\n", top, adjustment);
                 }
                 #endif

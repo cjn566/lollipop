@@ -1,5 +1,5 @@
 
-//#define DEBUG
+#define DEBUG
 
 // Pins
 #define ENCODER_A     23
@@ -11,7 +11,7 @@
 #define DEBOUNCE_MILLIS       50
 #define EDIT_HOLD_MILLIS      700
 #define EDIT_TIMEOUT_MILLIS   4000
-#define BLINK_STEPS           100
+#define BLINK_MILLIS          500
 
 // parameter_ts
 #define INIT_BRIGHTNESS   10

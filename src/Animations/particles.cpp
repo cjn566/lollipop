@@ -107,18 +107,18 @@ struct Particles: public AnimationBase{
         }
     }
 
-    void drawFrame(uint8_t stepsSinceLastFrame){
+    void drawFrame(uint8_t millisSinceLastFrame){
 
-        stepsSinceLastFrame = 1;
+        millisSinceLastFrame = 1;
         #ifdef DEBUG
         //Serial.println();
         #endif
         FastLED.clear();
 
                 // Spawn
-        if((stepsSinceLastFrame > 0) && (numParticles < MAX_PARTICLES)){
-            //Serial.printf("counter: %d\t#p: %d\tidx: %d\tstps: %d >>>  ", counter, numParticles, newParticleIdx, stepsSinceLastFrame);
-            counter += stepsSinceLastFrame;
+        if((millisSinceLastFrame > 0) && (numParticles < MAX_PARTICLES)){
+            //Serial.printf("counter: %d\t#p: %d\tidx: %d\tstps: %d >>>  ", counter, numParticles, newParticleIdx, millisSinceLastFrame);
+            counter += millisSinceLastFrame;
             if(counter >= spawnDelay){
                 counter -= spawnDelay;
                 while(particle[newParticleIdx].active){	// Find next available slot
@@ -159,16 +159,16 @@ struct Particles: public AnimationBase{
                 //     ledData.leds[leftPx + 1] = CHSV(p->color, ledData.saturation, rightVal);
                 // }
                 
-                if(stepsSinceLastFrame){
+                if(millisSinceLastFrame){
                     // move
                     // Location is += t*velocity
-                    p->location += (p->velocity * stepsSinceLastFrame) ;
+                    p->location += (p->velocity * millisSinceLastFrame) ;
                     if(p->location > MAX_LOCATION || p->location < 1){
                         p->active = false;
                         numParticles--;
                         //Serial.print("deleted");
                     } else {
-                        p->velocity += (p->acceleration * stepsSinceLastFrame);
+                        p->velocity += (p->acceleration * millisSinceLastFrame);
                         //Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
                     }
 

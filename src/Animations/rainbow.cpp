@@ -40,8 +40,8 @@ struct Rainbow : public AnimationBase{
         }
     }
 
-    void drawFrame(uint8_t stepsSinceLastFrame){
-            currHue += stepsSinceLastFrame;
+    void drawFrame(uint8_t millisSinceLastFrame){
+            currHue += millisSinceLastFrame;
             fill_rainbow(ledData.leds, NUM_LEDS, currHue, stretch);
 
             // From Gradient:

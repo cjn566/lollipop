@@ -42,7 +42,7 @@
 //         }
 //     }
 
-//     void drawFrame(uint8_t stepsSinceLastFrame){
+//     void drawFrame(uint8_t millisSinceLastFrame){
 //         #ifdef DEBUG
 //         //Serial.println();
 //         #endif

@@ -12,6 +12,7 @@
 
     struct state_struct {
         uint8_t saturation = 255;    
+        uint8_t speed = 128;    
         CRGBArray<NUM_LEDS> leds;
     };
 
