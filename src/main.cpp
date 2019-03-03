@@ -234,24 +234,24 @@ void handleButton()
 }
 
 //-------------- VISUAL FUNCTIONS -------------------------
-// #define AVERAGES 4
-// long elapses[AVERAGES];
-// uint8_t elapseIdx;
-// long getElapsedAvg(){
-//   long elapsed = millis() - elapses[elapseIdx];
-//   elapseIdx = (elapseIdx+1) % AVERAGES;
-//   elapses[elapseIdx] = elapsed;
-//   long avg = 0;
-//   for(int i = 0; i < AVERAGES; i++){
-//     avg += elapses[i];
-//   }
-//   return (avg >> 2);
-// }
+#define AVERAGES 4
+long elapses[AVERAGES];
+uint8_t elapseIdx;
+long getElapsedAvg(){
+  long elapsed = millis() - elapses[elapseIdx];
+  elapseIdx = (elapseIdx+1) % AVERAGES;
+  elapses[elapseIdx] = elapsed;
+  long avg = 0;
+  for(int i = 0; i < AVERAGES; i++){
+    avg += elapses[i];
+  }
+  return (avg >> 2);
+}
 
 void doFrame()
 {
   FastLED.show();
-  CURR_ANIM->drawFrame(1);//getElapsedAvg());
+  CURR_ANIM->drawFrame(getElapsedAvg());
 
   long now = millis();
   if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
