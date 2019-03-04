@@ -98,34 +98,33 @@ struct Particles: public AnimationBase{
     uint32_t particle[MAX_PARTICLES];
 
     struct P_values {
-        uint16_t location;
+        uint16_t timestamp;
         uint8_t hue;
         int8_t velocity;
         int8_t accel;
     };
 
-    #define ACCEL_W  4
-    #define VEL_W    8
+    #define ACCEL_W  5
+    #define VEL_W    5
     #define HUE_W    8
-    #define LOC_W    12
+    #define TS_W    14
+    #define TS_TRUNC  4   
     #define HUE_SH   (ACCEL_W + VEL_W)
-    #define LOC_SH   (HUE_SH + HUE_W)
+    #define TS_SH   (HUE_SH + HUE_W)
     #define MAKE_MASK(i) (0xffffffff >> (32 - i))
-
-    #define MAX_LOCATION ((1 << LOC_W) - 1)
 
     uint32_t collapseP(P_values p_values){
         uint32_t p;
-        p =  p_values.location  << LOC_SH;
-        p |= p_values.hue       << HUE_SH;
-        p |= p_values.velocity  << ACCEL_W;
+        p =  (((p_values.timestamp >> TS_TRUNC) & MAKE_MASK(TS_W))  << TS_SH);
+        p |= (p_values.hue       << HUE_SH);
+        p |= (p_values.velocity  << ACCEL_W);
         p |= p_values.accel;
         return p;
     };
 
     P_values expandP(uint32_t p){
         P_values p_values;
-        p_values.location   = p >> LOC_SH;
+        p_values.timestamp   = (p >> (TS_SH - TS_TRUNC));
         p_values.hue        = (p >> HUE_SH) & MAKE_MASK(HUE_W);
         p_values.velocity   = (p >> ACCEL_W) & MAKE_MASK(VEL_W);
         p_values.accel      = p & MAKE_MASK(ACCEL_W);
@@ -138,6 +137,7 @@ struct Particles: public AnimationBase{
         #endif
         FastLED.clear();
 
+        long now = millis();
                 // Spawn
         if((millisSinceLastFrame > 0) && (numParticles < MAX_PARTICLES)){
             //Serial.printf("counter: %d\t#p: %d\tidx: %d\tstps: %d >>>  ", counter, numParticles, newParticleIdx, millisSinceLastFrame);
@@ -150,7 +150,7 @@ struct Particles: public AnimationBase{
                 // Build new particle
                 numParticles++;                
                 P_values p_values;
-                p_values.location   = (velocity > 0? 0 : MAX_LOCATION);
+                p_values.timestamp  = millis();
                 p_values.hue        = hue;
                 p_values.velocity   = velocity;
                 p_values.accel      = accel;
@@ -167,7 +167,8 @@ struct Particles: public AnimationBase{
                 //Serial.print(particle[i].active? 'p':'-');
             if(particle[i]){
                 P_values pv = expandP(particle[i]);
-                
+                uint32_t age = now - pv.timestamp;
+                uint32_t location = (pv.velocity*age + ((pv.accel * (age * age)) >> 1));
 
 
                 
