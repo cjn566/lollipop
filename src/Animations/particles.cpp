@@ -169,30 +169,22 @@ struct Particles: public AnimationBase{
                 P_values pv = expandP(particle[i]);
                 uint32_t age = now - pv.timestamp;
                 uint32_t location = (pv.velocity*age + ((pv.accel * (age * age)) >> 1));
+                
+                Serial.printf("idx: %d\ta: %d\tv: %d\tl: %d\n", i, pv.accel, pv.velocity, location);
 
+                // if(location > MAX_LOCATION || location < 1){
+                //     particle[i] = 0;
+                //     numParticles--;
+                // }
 
                 
                 //Serial.printf("idx: %d\tlp: %d\tlv: %d\n", i, leftPx, leftVal);//, rightVal);
                 //Serial.printf("color: %d\n", p->hue);
-                ledData.leds[pv.location >> 4] = CHSV(pv.hue, ledData.saturation, 255);//leftVal);
+                //ledData.leds[pv.location >> 4] = CHSV(pv.hue, ledData.saturation, 255);//leftVal);
                 // if(leftPx < (NUM_LEDS - 1)){
                 //     ledData.leds[leftPx + 1] = CHSV(p->color, ledData.saturation, rightVal);
                 // }
-            
-                // move
-                // Location is += t*velocity
-                pv.location += (pv.velocity * millisSinceLastFrame) ;
-                if(pv.location > MAX_LOCATION || pv.location < 1){
-                    particle[i] = 0;
-                    numParticles--;
-                    //Serial.print("deleted");
-                } else {
-                    pv.velocity += (pv.accel * millisSinceLastFrame);
-                    //Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
-                }
 
-                
-                // Serial.printf("idx: %d\ta: %d\tv: %d\tp: %d\n", i, p->acceleration, p->velocity, p->location);
             }
         }
         //Serial.print(".");

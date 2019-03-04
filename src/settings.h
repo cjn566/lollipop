@@ -1,5 +1,5 @@
 
-//#define DEBUG
+#define DEBUG
 
 // Pins
 #define ENCODER_A     23
