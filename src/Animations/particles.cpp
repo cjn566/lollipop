@@ -5,9 +5,8 @@
 struct Particles: public AnimationBase{
 
     #define ENDPOINT 193
-    #define MAX_PARTICLES 30
-    #define LOCATION_SHIFT 24
-    #define MAX_LOCATION  (unsigned int)(ENDPOINT << LOCATION_SHIFT)
+    #define MAX_PARTICLES 1
+
     enum ParamName {
         SPAWN_RATE,
         SPAWN_RATE_VAR,
@@ -34,25 +33,14 @@ struct Particles: public AnimationBase{
     // state vars
     uint16_t counter = 0, numParticles = 0, newParticleIdx = 0, spawnDelay;
     
-    /*
-    [-pos-10-][-hue-8][]
-    00000000000000000000000000000000
-    */
-    struct Particle {
-        unsigned int location;
-        int  velocity;
-        int  acceleration;
-        uint8_t hue;
-        bool active = false;
-    } particle[MAX_PARTICLES];
 
 
     public:
     Particles(){
-        accel    =      0x00004000;
-        velocity =      0x00030000;
+        accel    =      3;
+        velocity =      5;
         spawnDelay = 10;
-        numParams = 9;
+        numParams = 0;
         params = new parameter_t[numParams];
         //params[*] = {CRGB::Red, 4};
     };
@@ -107,9 +95,44 @@ struct Particles: public AnimationBase{
         }
     }
 
-    void drawFrame(uint8_t millisSinceLastFrame){
+    uint32_t particle[MAX_PARTICLES];
 
-        millisSinceLastFrame = 1;
+    struct P_values {
+        uint16_t location;
+        uint8_t hue;
+        int8_t velocity;
+        int8_t accel;
+    };
+
+    #define ACCEL_W  4
+    #define VEL_W    8
+    #define HUE_W    8
+    #define LOC_W    12
+    #define HUE_SH   (ACCEL_W + VEL_W)
+    #define LOC_SH   (HUE_SH + HUE_W)
+    #define MAKE_MASK(i) (0xffffffff >> (32 - i))
+
+    #define MAX_LOCATION ((1 << LOC_W) - 1)
+
+    uint32_t collapseP(P_values p_values){
+        uint32_t p;
+        p =  p_values.location  << LOC_SH;
+        p |= p_values.hue       << HUE_SH;
+        p |= p_values.velocity  << ACCEL_W;
+        p |= p_values.accel;
+        return p;
+    };
+
+    P_values expandP(uint32_t p){
+        P_values p_values;
+        p_values.location   = p >> LOC_SH;
+        p_values.hue        = (p >> HUE_SH) & MAKE_MASK(HUE_W);
+        p_values.velocity   = (p >> ACCEL_W) & MAKE_MASK(VEL_W);
+        p_values.accel      = p & MAKE_MASK(ACCEL_W);
+        return p_values;
+    };
+
+    void drawFrame(uint8_t millisSinceLastFrame){
         #ifdef DEBUG
         //Serial.println();
         #endif
@@ -121,17 +144,18 @@ struct Particles: public AnimationBase{
             counter += millisSinceLastFrame;
             if(counter >= spawnDelay){
                 counter -= spawnDelay;
-                while(particle[newParticleIdx].active){	// Find next available slot
+                while(particle[newParticleIdx]){	// Find next available slot
                     newParticleIdx = (newParticleIdx + 1) % MAX_PARTICLES;
                 }
                 // Build new particle
-                numParticles++;
-                Particle *p = &particle[newParticleIdx];
-                p->active = true;
-                p->location = velocity > 0? 0 : MAX_LOCATION;//  beginning or end based on vel? 0 : end
-                p->velocity = velocity  + 0;// random variation;
-                p->acceleration = accel  + 0;// random variation;
-                p->hue = hue;// random variation;
+                numParticles++;                
+                P_values p_values;
+                p_values.location   = (velocity > 0? 0 : MAX_LOCATION);
+                p_values.hue        = hue;
+                p_values.velocity   = velocity;
+                p_values.accel      = accel;
+                particle[newParticleIdx] = collapseP(p_values);
+
                 hue += 8;
                 
                 //Serial.printf("hue: %d\n", hue);
@@ -139,42 +163,35 @@ struct Particles: public AnimationBase{
             }
         }
 
-        Particle *p;
         for (int i = 0; i < MAX_PARTICLES; i++){
                 //Serial.print(particle[i].active? 'p':'-');
-            if(particle[i].active){
-                p = &particle[i];
+            if(particle[i]){
+                P_values pv = expandP(particle[i]);
                 
-                
-                // draw
-                // spread based on velocity
-                uint8_t leftPx = p->location >> LOCATION_SHIFT;
-                unsigned int leftVal = p->location & 0x00FFFFFF;
-                // uint8_t rightVal = 0xFF - leftVal;
 
+
+                
                 //Serial.printf("idx: %d\tlp: %d\tlv: %d\n", i, leftPx, leftVal);//, rightVal);
                 //Serial.printf("color: %d\n", p->hue);
-                ledData.leds[leftPx] = CHSV(p->hue, ledData.saturation, 255);//leftVal);
+                ledData.leds[pv.location >> 4] = CHSV(pv.hue, ledData.saturation, 255);//leftVal);
                 // if(leftPx < (NUM_LEDS - 1)){
                 //     ledData.leds[leftPx + 1] = CHSV(p->color, ledData.saturation, rightVal);
                 // }
-                
-                if(millisSinceLastFrame){
-                    // move
-                    // Location is += t*velocity
-                    p->location += (p->velocity * millisSinceLastFrame) ;
-                    if(p->location > MAX_LOCATION || p->location < 1){
-                        p->active = false;
-                        numParticles--;
-                        //Serial.print("deleted");
-                    } else {
-                        p->velocity += (p->acceleration * millisSinceLastFrame);
-                        //Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
-                    }
-
-                    
-                    // Serial.printf("idx: %d\ta: %d\tv: %d\tp: %d\n", i, p->acceleration, p->velocity, p->location);
+            
+                // move
+                // Location is += t*velocity
+                pv.location += (pv.velocity * millisSinceLastFrame) ;
+                if(pv.location > MAX_LOCATION || pv.location < 1){
+                    particle[i] = 0;
+                    numParticles--;
+                    //Serial.print("deleted");
+                } else {
+                    pv.velocity += (pv.accel * millisSinceLastFrame);
+                    //Serial.printf("loc: %d\tacc: %d\tvel: %d", p->location, p->acceleration, p->velocity);
                 }
+
+                
+                // Serial.printf("idx: %d\ta: %d\tv: %d\tp: %d\n", i, p->acceleration, p->velocity, p->location);
             }
         }
         //Serial.print(".");

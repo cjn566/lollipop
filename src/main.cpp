@@ -87,6 +87,7 @@ void setup()
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_MILLIAMPS);
   FastLED.addLeds<WS2812B, LED_DATA, ORDER>(ledData.leds, NUM_LEDS);
   FastLED.setBrightness(INIT_BRIGHTNESS);
+  FastLED.setMaxRefreshRate(100);
 
   initAnimation();
 }
@@ -233,27 +234,18 @@ void handleButton()
   }
 }
 
-//-------------- VISUAL FUNCTIONS -------------------------
-#define AVERAGES 4
-long elapses[AVERAGES];
-uint8_t elapseIdx;
-long getElapsedAvg(){
-  long elapsed = millis() - elapses[elapseIdx];
-  elapseIdx = (elapseIdx+1) % AVERAGES;
-  elapses[elapseIdx] = elapsed;
-  long avg = 0;
-  for(int i = 0; i < AVERAGES; i++){
-    avg += elapses[i];
-  }
-  return (avg >> 2);
-}
+// -------------- VISUAL FUNCTIONS -------------------------
 
+long elapseMillis;
 void doFrame()
 {
-  FastLED.show();
-  CURR_ANIM->drawFrame(getElapsedAvg());
-
   long now = millis();
+  long elapse = now - elapseMillis;
+  elapseMillis = now;
+
+  FastLED.show();
+  CURR_ANIM->drawFrame(elapse);
+
   if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
   {
     blinkMillis = now;

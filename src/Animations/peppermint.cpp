@@ -9,6 +9,7 @@
 
         #define MAX_SPOKES 5
         #define MAX_SKEW 5
+
         enum ParamName {
             SPOKE,
             D_HUE,
@@ -21,7 +22,7 @@
         int8_t skew = 0;
 
         // state vars
-        uint8_t currAngle = 0;
+        uint16_t currAngle = 0;
         uint8_t halfAngleBetweenSpokes;
         uint8_t angleBetweenSpokes;
 
@@ -78,7 +79,7 @@
             //Serial.println();
             #endif
 
-            currAngle = mod8(currAngle + millisSinceLastFrame, angleBetweenSpokes);
+            currAngle = (currAngle + millisSinceLastFrame) % angleBetweenSpokes;
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
