@@ -87,7 +87,7 @@ void setup()
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_MILLIAMPS);
   FastLED.addLeds<WS2812B, LED_DATA, ORDER>(ledData.leds, NUM_LEDS);
   FastLED.setBrightness(INIT_BRIGHTNESS);
-  FastLED.setMaxRefreshRate(100);
+  FastLED.setMaxRefreshRate(FPS);
 
   initAnimation();
 }

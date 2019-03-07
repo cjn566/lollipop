@@ -12,6 +12,10 @@
     
     #define LOGD(s) Serial.print(s);
 
+    #define MAKE_MASK(i) (uint32_t)(0xffffffff >> (32 - i))
 
+    #define MAX_UVAL_N_BITS(n) MAKE_MASK(n)
+
+    #define SCALE32_8(n, s) ((s * n) / 256)
     
 #endif
