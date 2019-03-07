@@ -192,11 +192,13 @@ struct Particles: public AnimationBase{
                 long age = now - pv.timestamp;
 
                 #ifdef DEBUG
-                    Serial.printf("idx: %d\tts: %d\tpre-mod age: %d\t", i, pv.timestamp, age);
+                    Serial.printf("idx: %d\tts: %d\t  pre-mod age: %d\t", i, pv.timestamp, age);
                 #endif
 
+                #define OVFL_TIME_CUTOFF 500
+
                 if(age < 0){
-                    if(age > -1000) // Particle is within one second of overflowing age counter, so retire it
+                    if(age > -OVFL_TIME_CUTOFF) // Particle is within one second of overflowing age counter, so retire it
                     {
                         particle[i] = 0;
                         numParticles--;
@@ -210,16 +212,17 @@ struct Particles: public AnimationBase{
                 int p_vel = baseVel + (pv.velocity * VEL_VAR_MOD);
                 int p_accel = baseAccel + (pv.accel * ACCEL_VAR_MOD);
 
-                #define LOC_REDUCTION   10
+                #define LOC_REDUCTION   7
                 #define LOC_FRACTIONAL  8
-                uint32_t location = (p_accel*age + ((p_accel * (age * age)) >> 1)) >> LOC_REDUCTION;
+                uint32_t location = (pv.velocity*age + ((pv.accel * (age * age)) >> 1)) >> (LOC_REDUCTION + LOC_FRACTIONAL);
                 uint16_t loc_fractional = location & MAKE_MASK(LOC_FRACTIONAL);
 
                 #ifdef DEBUG
                     Serial.printf("new age: %d\tloc: %d\n", age, location);
                 #endif
                 
-                if(location > (ENDPOINT << LOC_FRACTIONAL) || location < 0){
+                // if(location > (ENDPOINT << LOC_FRACTIONAL) || location < 0){
+                if(location > (ENDPOINT) || location < 0){
                     particle[i] = 0;
                     numParticles--;
                 } else {
