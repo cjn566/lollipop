@@ -40,9 +40,9 @@ Rainbow rainbow = Rainbow();
 Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
+    &rainbow,
     &peppermint,
     &particles,
-    &rainbow,
     //&indices
     };
 #define CURR_ANIM allAnims[currAnimationIdx]

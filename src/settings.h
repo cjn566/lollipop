@@ -24,7 +24,7 @@
 
 // Video
 #ifdef DEBUG
-    #define FPS                 10
+    #define FPS                 20
 #else
     #define FPS                 150
 #endif

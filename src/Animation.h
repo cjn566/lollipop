@@ -2,6 +2,7 @@
     #define ANIMATION_H
     
     #include "FastLED.h"
+    #include "util.h"
 
     #define NUM_LEDS            204
     #define ORDER               GRB

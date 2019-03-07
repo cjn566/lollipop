@@ -1,5 +1,4 @@
 #include "../Animation.h"
-#include "util.h"
 //#include "radii.h"
 
 
@@ -212,7 +211,7 @@ struct Particles: public AnimationBase{
                 int p_vel = baseVel + (pv.velocity * VEL_VAR_MOD);
                 int p_accel = baseAccel + (pv.accel * ACCEL_VAR_MOD);
 
-                #define LOC_REDUCTION   7
+                #define LOC_REDUCTION   6
                 #define LOC_FRACTIONAL  8
                 uint32_t location = (pv.velocity*age + ((pv.accel * (age * age)) >> 1)) >> (LOC_REDUCTION + LOC_FRACTIONAL);
                 uint16_t loc_fractional = location & MAKE_MASK(LOC_FRACTIONAL);

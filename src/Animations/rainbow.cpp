@@ -10,10 +10,12 @@ struct Rainbow : public AnimationBase{
     };
 
     // params vars
-    uint8_t stretch = 3;
+    int8_t stretch = 3;
 
     // state vars
     uint8_t currHue = 0;
+    int currTime = 0;
+    int millisInFullCycle = 3000;
 
     public:
     Rainbow(){
@@ -28,6 +30,7 @@ struct Rainbow : public AnimationBase{
     void initParam(uint8_t paramIdx){
         switch(paramIdx){
             case STRETCH:
+                drawScale.init(true, MAX_STRETCH, stretch);
                 break;
         }
     }
@@ -36,12 +39,19 @@ struct Rainbow : public AnimationBase{
         switch(paramIdx){
             case STRETCH:
                 stretch = CLAMP_SN(stretch + INCDEC, MAX_STRETCH);
+                drawScale.setValue(stretch);
                 break;
         }
     }
 
-    void drawFrame(uint8_t stepsSinceLastFrame){
-            currHue += stepsSinceLastFrame;
+
+    void drawFrame(uint8_t millisSinceLastFrame){
+        currTime += millisSinceLastFrame;
+        if(currTime > millisInFullCycle) currTime -= millisInFullCycle;
+
+        currHue = ((256 * currTime) / millisInFullCycle);
+
+
             fill_rainbow(ledData.leds, NUM_LEDS, currHue, stretch);
 
             // From Gradient:
