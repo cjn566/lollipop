@@ -9,7 +9,6 @@
 
         #define MAX_SPOKES 5
         #define MAX_SKEW 5
-
         enum ParamName {
             SPOKE,
             D_HUE,
@@ -22,7 +21,7 @@
         int8_t skew = 0;
 
         // state vars
-        uint16_t currAngle = 0;
+        uint8_t currAngle = 0;
         uint8_t halfAngleBetweenSpokes;
         uint8_t angleBetweenSpokes;
 
@@ -73,13 +72,13 @@
             }
         }
 
-        void drawFrame(uint8_t millisSinceLastFrame){
+        void drawFrame(uint8_t stepsSinceLastFrame){
 
             #ifdef DEBUG
             //Serial.println();
             #endif
 
-            currAngle = (currAngle + millisSinceLastFrame) % angleBetweenSpokes;
+            currAngle = mod8(currAngle + stepsSinceLastFrame, angleBetweenSpokes);
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
@@ -93,7 +92,7 @@
                 int adjustment = top >> 5;
 
                 #ifdef DEBUG
-                if(millisSinceLastFrame == 1 && i == 120){
+                if(stepsSinceLastFrame == 1 && i == 120){
                     //Serial.printf("skew: %d, %d\n", top, adjustment);
                 }
                 #endif

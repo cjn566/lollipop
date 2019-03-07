@@ -5,7 +5,6 @@
 struct Rainbow : public AnimationBase{
 
     #define MAX_STRETCH 8
-    #define MILLIS_IN_HUE_CYCLE 4095
     enum ParamName {
         STRETCH,
     };
@@ -14,7 +13,7 @@ struct Rainbow : public AnimationBase{
     uint8_t stretch = 3;
 
     // state vars
-    uint16_t currHue = 0;
+    uint8_t currHue = 0;
 
     public:
     Rainbow(){
@@ -41,14 +40,9 @@ struct Rainbow : public AnimationBase{
         }
     }
 
-    void drawFrame(uint8_t millisSinceLastFrame){
-            currHue += millisSinceLastFrame;
-            if(currHue > MILLIS_IN_HUE_CYCLE){
-              currHue -= MILLIS_IN_HUE_CYCLE;
-            }
-            uint8_t hue8 = currHue >> 4;
-
-            fill_rainbow(ledData.leds, NUM_LEDS, hue8, stretch);
+    void drawFrame(uint8_t stepsSinceLastFrame){
+            currHue += stepsSinceLastFrame;
+            fill_rainbow(ledData.leds, NUM_LEDS, currHue, stretch);
 
             // From Gradient:
             // CHSV first =  CHSV(baseHue + currHue, $.saturation, 255);

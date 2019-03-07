@@ -1,5 +1,5 @@
 
-//#define DEBUG
+#define DEBUG
 
 // Pins
 #define ENCODER_A     23
@@ -14,8 +14,8 @@
 #define BLINK_MILLIS          500
 
 // parameter_ts
-#define INIT_BRIGHTNESS   10
-#define INIT_SPEED        80
+#define INIT_BRIGHTNESS   40
+#define INIT_SPEED        10
 #define BRIGH_ADJ_MULT    3
 #define SPEED_ADJ_MULT    3
 #define SPEED_REDUCTION_FACTOR    2
@@ -23,7 +23,12 @@
 
 
 // Video
-#define FPS                 60
+#ifdef DEBUG
+    #define FPS                 10
+#else
+    #define FPS                 150
+#endif
+
 #define ANIM_STEPPER_FREQ   100
 
 // Misc

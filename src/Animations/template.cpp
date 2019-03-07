@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 
 // #include "../Animation.h"
 // #include "util.h"
@@ -42,7 +42,7 @@
 //         }
 //     }
 
-//     void drawFrame(uint8_t millisSinceLastFrame){
+//     void drawFrame(uint8_t stepsSinceLastFrame){
 //         #ifdef DEBUG
 //         //Serial.println();
 //         #endif
