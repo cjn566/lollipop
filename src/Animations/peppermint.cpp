@@ -24,7 +24,7 @@
         uint8_t currAngle = 0;
         uint8_t halfAngleBetweenSpokes;
         uint8_t angleBetweenSpokes;
-        int millisInFullRotation = 4000;
+        int millisInFullRotation = 4000 * SPEED_SCALE_BASE;
         int millisInFractionalRotation;
 
         public:
@@ -41,7 +41,7 @@
 
             params[SKEW].max = MAX_SKEW;
             params[SKEW].ticksToAdjust = 2;
-            params[SKEW].scaleColor = CRGB::PeachPuff;
+            params[SKEW].scaleColor = CRGB::Purple;
         };
 
         void initAnim(){
@@ -56,15 +56,17 @@
         }
 
         void initParam(uint8_t paramIdx){
-            drawScale.init(&params[paramIdx]);
             switch(paramIdx){
                 case SPOKE:
+                    drawScale.init(&params[paramIdx]);
                     drawScale.setValue(numSpokes);
                     break;
                 case D_HUE:
+                    drawScale.init(numSpokes, params[paramIdx].scaleColor);
                     drawScale.setValue(deltaHue);
                     break;
                 case SKEW:
+                    drawScale.init(&params[paramIdx]);
                     drawScale.setValue(skew);
                     break;
             }
@@ -93,27 +95,24 @@
 
         int curMillis = 0;
 
-        void drawFrame(uint8_t scaledTimeSinceLastFrame){
+        void drawFrame(int16_t scaledTimeSinceLastFrame){
             curMillis += scaledTimeSinceLastFrame;
             if(curMillis > millisInFractionalRotation) curMillis -= millisInFractionalRotation;            
             currAngle = SCALE32_TO_8(curMillis, millisInFullRotation);
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
+
                 if(anglePlusRotation > halfAngleBetweenSpokes){
                     anglePlusRotation = angleBetweenSpokes - anglePlusRotation;
                 }
+                
                 uint8_t angleWithFullHueMultplier = anglePlusRotation * deltaHue;
-
-
+                
                 int top = (int)skew * i;
                 int adjustment = top >> 5;
 
-
                 uint8_t withSkew = angleWithFullHueMultplier + adjustment;
-
-
-                
                 ledData.leds[i] = CHSV(withSkew, ledData.saturation, 255);
             }
         }

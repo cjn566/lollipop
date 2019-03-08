@@ -134,7 +134,6 @@ struct Particles: public AnimationBase{
         #ifdef DEBUG
             Serial.printf("now: %d\r\n", now);
         #endif
-        FastLED.clear();
 
                 // Spawn
         if(numParticles < MAX_PARTICLES){

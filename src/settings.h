@@ -2,7 +2,7 @@
 #ifndef SETTINGS_H
     #define SETTINGS_H
 
-    #define DEBUG
+    //#define DEBUG
 
     // Pins
     #define ENCODER_A     23
@@ -18,7 +18,7 @@
 
     // parameter_ts
     #define INIT_BRIGHTNESS   40
-    #define SPEED_SCALE_BASE  60
+    #define SPEED_SCALE_BASE  80
     #define BRIGH_ADJ_MULT    3
     #define SPEED_ADJ_MULT    3
     #define SPEED_REDUCTION_FACTOR    2

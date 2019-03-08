@@ -4,7 +4,7 @@
 
 struct Rainbow : public AnimationBase{
 
-    #define MAX_STRETCH 8
+    #define MAX_STRETCH 20
     enum ParamName {
         STRETCH,
     };
@@ -15,7 +15,7 @@ struct Rainbow : public AnimationBase{
     // state vars
     uint8_t currHue = 0;
     int currTime = 0;
-    int millisInFullCycle = 3000;
+    int millisInFullCycle = 3000 * SPEED_SCALE_BASE;
 
     public:
     Rainbow(){
@@ -23,7 +23,7 @@ struct Rainbow : public AnimationBase{
         params = new parameter_t[numParams];
         params[STRETCH].max = MAX_STRETCH;
         params[STRETCH].ticksToAdjust = 2;
-        params[STRETCH].scaleColor = CRGB::MintCream;
+        params[STRETCH].scaleColor = CRGB::Violet;
     };
 
     void initAnim(){
@@ -52,7 +52,7 @@ struct Rainbow : public AnimationBase{
     }
 
 
-    void drawFrame(uint8_t scaledTimeSinceLastFrame){
+    void drawFrame(int16_t scaledTimeSinceLastFrame){
         currTime += scaledTimeSinceLastFrame;
         if(currTime > millisInFullCycle) currTime -= millisInFullCycle;
 

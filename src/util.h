@@ -3,6 +3,7 @@
 
     
     #define CLAMP_8(n)      ( n > 255? 255 : ( n < 0? 0 : n))
+    #define CLAMP_S8(n)      ( n > 127? 127 : ( n < -127? -127 : n))
     #define CLAMP_UN_0(n, m)  ( n > m? m : ( n < 0? 0 : n))
     #define CLAMP_UN_1(n, m)  ( n > m? m : ( n < 1? 1 : n))
     #define CLAMP_SN(n, m)  ( n > m? m : ( n < -m? -m : n))

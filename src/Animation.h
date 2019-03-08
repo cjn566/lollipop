@@ -47,7 +47,7 @@
         virtual void        drawFrame(int16_t){};
 
         void                adjSpeed(bool up){
-            speed  = CLAMP_8(speed + INCDEC);
+            speed  = CLAMP_S8(speed + INCDEC);
             drawScale.setValue(speed);
         }
         

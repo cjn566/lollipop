@@ -27,21 +27,21 @@ DrawScale drawScale;
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
-#define NUM_ANIMATIONS 1
-//#include "Animations/peppermint.cpp"
+#define NUM_ANIMATIONS 2
+#include "Animations/peppermint.cpp"
 #include "Animations/rainbow.cpp"
 //#include "Animations/indices.cpp"
 //#include "Animations/particles.cpp"
 
 
-//Peppermint peppermint = Peppermint();
+Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
 //Indices indices = Indices();
 //Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
+    &peppermint,
     &rainbow,
-    //&peppermint,
     //&particles,
     //&indices
     };
@@ -73,11 +73,11 @@ void initParam();
 
 void setup()
 {
-#ifdef DEBUG
-  Serial.begin(9600);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-#endif
+  #ifdef DEBUG
+    Serial.begin(9600);
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, HIGH);
+  #endif
 
   delay(STARTUP_DELAY);
   encoder.write(0);
@@ -102,24 +102,22 @@ enum GlobalParams
   SATURATION
 };
 parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
-    parameter_t{CRGB::Crimson}, // Brightness
-    parameter_t{CRGB::White},   // Speed
-    parameter_t{CRGB::DarkGray} // Saturation
+    parameter_t{CRGB::Gold}, // Brightness
+    parameter_t{CRGB::Green, 127},   // Speed
+    parameter_t{CRGB::CadetBlue} // Saturation
 };
 
 void changeValue(bool up)
 {
-
-#ifdef DEBUG
-  Serial.print(up ? "\n++: " : "\n--: ");
-#endif
-
   if(edittingGlobalParams){
     switch (globParamIdx)
     {
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH) ? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
       FastLED.setBrightness(brightness);
+      #ifdef DEBUG
+        Serial.printf("b: %d\n", brightness);
+      #endif
       drawScale.setValue(brightness);
       break;
     case SPEED:
@@ -142,6 +140,17 @@ void initParam()
   if(edittingGlobalParams){
     ticksToAdjust = globalParams[globParamIdx].ticksToAdjust;
     drawScale.init(&globalParams[globParamIdx]);
+    switch(globParamIdx){
+      case BRIGHTNESS:
+        drawScale.setValue(brightness);
+        break;
+      case SPEED:
+        drawScale.setValue(CURR_ANIM->speed);
+        break;
+      case SATURATION:
+        drawScale.setValue(ledData.saturation);
+        break;
+    }
   }
   else
   {
@@ -233,7 +242,9 @@ void doFrame()
   elapseMillis = now;
 
   FastLED.show();
+  FastLED.clear();
   CURR_ANIM->drawBase(elapse);
+  //CURR_ANIM->drawFrame(elapse);
 
   if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
   {
@@ -241,9 +252,10 @@ void doFrame()
     blinkState = !blinkState;
   }
 
-#ifdef TIMING
-  Serial.print("f");
-#endif
+  #ifdef DEBUG
+    //Serial.print("f");
+  #endif
+
   if (ui_state == EDIT)
   {
     drawScale.draw();
@@ -289,8 +301,8 @@ void loop()
     }
     else
     {
-      int8_t newPosition = encoder.read() >> 2;
-      if (abs8(newPosition) >= ticksToAdjust)
+      int8_t newPosition = encoder.read();
+      if ((abs8(newPosition)>>2) >= ticksToAdjust)
       {
         changeValue(newPosition >= ticksToAdjust);
         encoder.write(0);
