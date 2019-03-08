@@ -24,28 +24,48 @@
         uint8_t currAngle = 0;
         uint8_t halfAngleBetweenSpokes;
         uint8_t angleBetweenSpokes;
+        int millisInFullRotation = 4000;
+        int millisInFractionalRotation;
 
         public:
         Peppermint(){
             numParams = 3;
             params = new parameter_t[numParams];
-            params[SPOKE] = {CRGB::Red, 4};
-            params[D_HUE] = {CRGB::Red, 8};
-            params[SKEW] = {CRGB::Red, 8};
+            params[SPOKE].max = MAX_SPOKES;
+            params[SPOKE].ticksToAdjust = 2;
+            params[SPOKE].scaleColor = CRGB::OrangeRed;
+
+            params[D_HUE].max = MAX_SPOKES;
+            params[D_HUE].ticksToAdjust = 2;
+            params[D_HUE].scaleColor = CRGB::PaleVioletRed;
+
+            params[SKEW].max = MAX_SKEW;
+            params[SKEW].ticksToAdjust = 2;
+            params[SKEW].scaleColor = CRGB::PeachPuff;
         };
 
         void initAnim(){
-            halfAngleBetweenSpokes = (256 / (numSpokes * 2));
+            millisInFractionalRotation = millisInFullRotation / numSpokes;
+            halfAngleBetweenSpokes = (128 / numSpokes);
             angleBetweenSpokes = halfAngleBetweenSpokes * 2;
             if(!angleBetweenSpokes) angleBetweenSpokes -= 1;
+            deltaHue = numSpokes;
             #ifdef DEBUG
             Serial.printf("spokes: %d, angle: %d\n", numSpokes, angleBetweenSpokes);
             #endif
         }
 
         void initParam(uint8_t paramIdx){
+            drawScale.init(&params[paramIdx]);
             switch(paramIdx){
-                case 0:
+                case SPOKE:
+                    drawScale.setValue(numSpokes);
+                    break;
+                case D_HUE:
+                    drawScale.setValue(deltaHue);
+                    break;
+                case SKEW:
+                    drawScale.setValue(skew);
                     break;
             }
         }
@@ -53,18 +73,17 @@
         void adjParam(uint8_t paramIdx, bool up){
             switch(paramIdx){
                 case SPOKE:
-                    numSpokes += INCDEC;
-                    if(!numSpokes) numSpokes = MAX_SPOKES;
-                    else if(numSpokes > MAX_SPOKES) numSpokes = 1;
+                    numSpokes = CLAMP_UN_1(numSpokes + INCDEC, MAX_SPOKES);
+                    drawScale.setValue(numSpokes);
                     initAnim();
                     break;
                 case D_HUE:
-                    deltaHue += INCDEC;
-                    if(!deltaHue) deltaHue = numSpokes;
-                    else if(numSpokes > numSpokes) deltaHue = 1;
+                    deltaHue = CLAMP_UN_1(deltaHue + INCDEC, numSpokes);
+                    drawScale.setValue(deltaHue);
                     break;
                 case SKEW:
                     skew = CLAMP_SN(skew + INCDEC, MAX_SKEW);
+                    drawScale.setValue(skew);
                     #ifdef DEBUG
                     Serial.printf("Skew: %d\n", skew);
                     #endif
@@ -72,13 +91,12 @@
             }
         }
 
-        void drawFrame(uint8_t stepsSinceLastFrame){
+        int curMillis = 0;
 
-            #ifdef DEBUG
-            //Serial.println();
-            #endif
-
-            currAngle = mod8(currAngle + stepsSinceLastFrame, angleBetweenSpokes);
+        void drawFrame(uint8_t scaledTimeSinceLastFrame){
+            curMillis += scaledTimeSinceLastFrame;
+            if(curMillis > millisInFractionalRotation) curMillis -= millisInFractionalRotation;            
+            currAngle = SCALE32_TO_8(curMillis, millisInFullRotation);
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
@@ -91,11 +109,7 @@
                 int top = (int)skew * i;
                 int adjustment = top >> 5;
 
-                #ifdef DEBUG
-                if(stepsSinceLastFrame == 1 && i == 120){
-                    //Serial.printf("skew: %d, %d\n", top, adjustment);
-                }
-                #endif
+
                 uint8_t withSkew = angleWithFullHueMultplier + adjustment;
 
 

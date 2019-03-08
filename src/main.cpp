@@ -27,22 +27,22 @@ DrawScale drawScale;
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
-#define NUM_ANIMATIONS 3
-#include "Animations/peppermint.cpp"
+#define NUM_ANIMATIONS 1
+//#include "Animations/peppermint.cpp"
 #include "Animations/rainbow.cpp"
 //#include "Animations/indices.cpp"
-#include "Animations/particles.cpp"
+//#include "Animations/particles.cpp"
 
 
-Peppermint peppermint = Peppermint();
+//Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
 //Indices indices = Indices();
-Particles particles = Particles();
+//Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
     &rainbow,
-    &peppermint,
-    &particles,
+    //&peppermint,
+    //&particles,
     //&indices
     };
 #define CURR_ANIM allAnims[currAnimationIdx]
@@ -102,9 +102,9 @@ enum GlobalParams
   SATURATION
 };
 parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
-    parameter_t{CRGB::Crimson, 4}, // Brightness
-    parameter_t{CRGB::White, 2},   // Speed
-    parameter_t{CRGB::DarkGray, 2} // Saturation
+    parameter_t{CRGB::Crimson}, // Brightness
+    parameter_t{CRGB::White},   // Speed
+    parameter_t{CRGB::DarkGray} // Saturation
 };
 
 void changeValue(bool up)
@@ -123,8 +123,7 @@ void changeValue(bool up)
       drawScale.setValue(brightness);
       break;
     case SPEED:
-      ledData.speed = CLAMP_8(ledData.speed + INCDEC);
-      drawScale.setValue(ledData.speed);
+      CURR_ANIM->adjSpeed(up);
       break;
     case SATURATION:
       ledData.saturation = CLAMP_8(ledData.saturation + INCDEC);
@@ -134,30 +133,19 @@ void changeValue(bool up)
   else CURR_ANIM->adjParam(animParamIdx, up);
 }
 
-uint8_t ticksToAdjust = 4;
+uint8_t ticksToAdjust = 1;
 void initParam()
 {
   encoder.write(0);
   blinkState = true;
   blinkMillis = millis();
   if(edittingGlobalParams){
-    ticksToAdjust = globalParams[globParamIdx].ticksToAdjust; // || 4;    
-    switch (globParamIdx)
-    {
-    case BRIGHTNESS:
-      drawScale.init(true, 256, brightness, CRGB::Gold);
-      break;
-    case SPEED:
-      drawScale.init(true, 256, ledData.speed, CRGB::Green);
-      break;
-    case SATURATION:
-      drawScale.init(true, 256, ledData.saturation, CRGB::Blue);
-      break;
-    }
+    ticksToAdjust = globalParams[globParamIdx].ticksToAdjust;
+    drawScale.init(&globalParams[globParamIdx]);
   }
   else
   {
-    ticksToAdjust = CURR_ANIM->getParam(animParamIdx).ticksToAdjust; // || 4;
+    ticksToAdjust = CURR_ANIM->getParam(animParamIdx).ticksToAdjust;
     CURR_ANIM->initParam(animParamIdx);
   }
 }
@@ -166,6 +154,7 @@ void initParam()
 
 void changeState(UI_State newState)
 {
+  if(ui_state == HOME) drawScale.turnoff();
   switch (newState)
   {
   case EDIT:
@@ -244,7 +233,7 @@ void doFrame()
   elapseMillis = now;
 
   FastLED.show();
-  CURR_ANIM->drawFrame(elapse);
+  CURR_ANIM->drawBase(elapse);
 
   if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
   {
@@ -260,15 +249,11 @@ void doFrame()
     drawScale.draw();
     ledData.leds(0, (NUM_GLOBAL_PARAMS + CURR_ANIM->getNumParams() - 1)) = CRGB::LightSeaGreen;
 
-    //TODO: unfuck
     uint8_t currParamIdx = edittingGlobalParams? globParamIdx : (NUM_GLOBAL_PARAMS + animParamIdx);
-    if (!ledData.speed)
+    if (blinkState)
     {
-      ledData.leds[currParamIdx] = CRGB::Red;
-    }
-    else if (blinkState)
-    {
-      ledData.leds[currParamIdx] = CRGB::Green;
+      ledData.leds[currParamIdx] = edittingGlobalParams? globalParams[globParamIdx].scaleColor :
+                                                         CURR_ANIM->getParam(animParamIdx).scaleColor;
     }
     else
     {
@@ -304,7 +289,7 @@ void loop()
     }
     else
     {
-      int8_t newPosition = encoder.read();
+      int8_t newPosition = encoder.read() >> 2;
       if (abs8(newPosition) >= ticksToAdjust)
       {
         changeValue(newPosition >= ticksToAdjust);

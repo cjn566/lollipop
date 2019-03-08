@@ -21,7 +21,11 @@
 //     *(){
 //         numParams = *;
 //         params = new parameter_t[numParams];
-//         params[*] = {CRGB::Red, 4};
+
+            // params[].max = ;
+            // params[].ticksToAdjust = ;
+            // params[].scaleColor = CRG::;
+
 //     };
 
 //     void initAnim(){

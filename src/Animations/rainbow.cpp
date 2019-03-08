@@ -21,16 +21,23 @@ struct Rainbow : public AnimationBase{
     Rainbow(){
         numParams = 1;
         params = new parameter_t[numParams];
-        params[STRETCH] = {CRGB::Red, 4};
+        params[STRETCH].max = MAX_STRETCH;
+        params[STRETCH].ticksToAdjust = 2;
+        params[STRETCH].scaleColor = CRGB::MintCream;
     };
 
     void initAnim(){
     }
 
     void initParam(uint8_t paramIdx){
-        switch(paramIdx){
+        drawScale.init(&params[paramIdx]);
+        switch (paramIdx)
+        {
             case STRETCH:
-                drawScale.init(true, MAX_STRETCH, stretch);
+                drawScale.setValue(stretch);
+                break;
+        
+            default:
                 break;
         }
     }
@@ -45,11 +52,11 @@ struct Rainbow : public AnimationBase{
     }
 
 
-    void drawFrame(uint8_t millisSinceLastFrame){
-        currTime += millisSinceLastFrame;
+    void drawFrame(uint8_t scaledTimeSinceLastFrame){
+        currTime += scaledTimeSinceLastFrame;
         if(currTime > millisInFullCycle) currTime -= millisInFullCycle;
 
-        currHue = ((256 * currTime) / millisInFullCycle);
+        currHue = SCALE32_TO_8(currTime, millisInFullCycle);
 
 
             fill_rainbow(ledData.leds, NUM_LEDS, currHue, stretch);

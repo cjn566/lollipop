@@ -73,26 +73,7 @@ struct Particles: public AnimationBase{
     }
 
     void initParam(ParamName paramIdx){
-        switch(paramIdx){
-            case SPAWN_RATE:
-                break;
-            case SPAWN_RATE_VAR:
-                break;
-            case VELOCITY:
-                break;
-            case VELOCITY_VAR:
-                break;
-            case ACCELERATION:
-                break;
-            case ACCELERATION_VAR:
-                break;
-            case COLOR:
-                break;
-            case COLOR_VAR:
-                break;
-            case COLOR_CYCLE_RATE:
-                break;
-        }
+        drawScale.init(&params[paramIdx]);
     }
 
     void adjParam(uint8_t paramIdx, bool up){
@@ -204,7 +185,8 @@ struct Particles: public AnimationBase{
                     }
                     age += TS_MOD;
                 }
-                age = SCALE32_8(age, ledData.speed);
+
+                age = SCALE32_BY_8(age, speed);
 
                 #define VEL_VAR_MOD     1   
                 #define ACCEL_VAR_MOD   1

@@ -13,27 +13,27 @@ int maxVal;
 uint16_t brightnessPointsPerValue;
 CRGB onColor;
 
-void DrawScale::setValue(int val){
-    
+void DrawScale::setValue(int val){    
     pValue = CLAMP_SN(val, maxVal);
-    // if(val >= 0){
-    //     pValue = (val > maxVal)? maxVal : val;
-    // } else {
-    //     pValue = (val < -maxVal)? -maxVal : val;
-    // }
+    active = true;
     #ifdef DEBUG
     Serial.printf("scale value: %d\n", val);
     #endif
 }
 
-void DrawScale::init(bool isActive, int nMax, int val, CRGB nColor){
-    active = isActive;
+void DrawScale::turnoff(){active=false;};
+
+void DrawScale::init(uint32_t nMax, CRGB nColor){
+    active = false;
     maxVal = nMax;
     brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / nMax;
     onColor = nColor;
-    setValue(val);
 }
 
+void DrawScale::init(parameter_t * param_ptr){
+    init(param_ptr->max, param_ptr->scaleColor);
+}
+    
 void DrawScale::draw(){
     if(active){
         ledData.leds(SCALE_START_IDX, SCALE_START_IDX + (SCALE_HALF_SIZE*2) - 1) = CRGB::White;
