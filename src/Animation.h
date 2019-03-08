@@ -20,19 +20,16 @@
         CRGB scaleColor = CRGB::Green;
         uint32_t max = 256;
         uint8_t ticksToAdjust = 1;
-    };
-
-    
+    };    
 
     class DrawScale {
         public:
+        DrawScale(parameter_t * globParams);
+        void setAnimation(AnimationBase *animation);
+        void setParameter(bool isGlobal, uint8_t paramIdx);
         void setValue(int);
-        void turnoff();
-        void init(uint32_t nMax, CRGB color);
-        void init(parameter_t * param_ptr);
-        void draw();
+        void draw(bool blinkOn);
     };
-
     extern DrawScale drawScale;
 
     struct AnimationBase {
@@ -40,9 +37,9 @@
         uint8_t numParams;
         parameter_t *params;
         AnimationBase(){};
+        virtual void        initAnim(){};
         virtual uint8_t     getNumParams(){return numParams;};
         virtual parameter_t getParam(uint8_t paramIdx){return params[paramIdx];};
-        virtual void        initAnim(){};
         virtual void        initParam(uint8_t paramIdx){};
         virtual void        adjParam(uint8_t paramIdx, bool up){};
         virtual void        drawFrame(int16_t){};

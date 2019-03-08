@@ -3,6 +3,7 @@
     #define SETTINGS_H
 
     #define DEBUG
+    
 
     // Pins
     #define ENCODER_A     23
@@ -19,7 +20,8 @@
     #define FAST_SCROLL_RESET     700
     #define FAST_SCROLL_MAX       20
 
-    // parameter_ts
+    // parameters
+    #define NUM_GLOBAL_PARAMS 3
     #define INIT_BRIGHTNESS   40
 
     #ifdef DEBUG

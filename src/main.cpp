@@ -18,12 +18,24 @@ enum UI_State
   EDIT
 };
 
+enum GlobalParams
+{
+  BRIGHTNESS,
+  SPEED,
+  SATURATION
+};
+parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
+    parameter_t{CRGB::Gold}, // Brightness
+    parameter_t{CRGB::Green, 127},   // Speed
+    parameter_t{CRGB::Black} // Saturation
+};
+
 UI_State ui_state = HOME;
 bool blinkState = true, edittingGlobalParams = true;
 long frameMillis, blinkMillis;
-uint8_t globParamIdx = 0, animParamIdx = 0;
+uint8_t paramIdx = 0;
 uint8_t numAnimParams, numTotalParams;
-DrawScale drawScale;
+DrawScale drawScale = DrawScale(globalParams);
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
@@ -94,24 +106,11 @@ void setup()
 
 //-------------- UI -> PARAMETERS ---------------------------------
 
-#define NUM_GLOBAL_PARAMS 3
-enum GlobalParams
-{
-  BRIGHTNESS,
-  SPEED,
-  SATURATION
-};
-parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
-    parameter_t{CRGB::Gold}, // Brightness
-    parameter_t{CRGB::Green, 127},   // Speed
-    parameter_t{CRGB::Black} // Saturation
-};
-
 void changeValue(bool up)
 {
   if(edittingGlobalParams){
     int adj = (INCDEC * ledData.fast_scroll_ctr) >> 1;
-    switch (globParamIdx)
+    switch (paramIdx)
     {
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + adj);
@@ -126,7 +125,7 @@ void changeValue(bool up)
       drawScale.setValue(ledData.saturation);
     }
   }
-  else CURR_ANIM->adjParam(animParamIdx, up);
+  else CURR_ANIM->adjParam(paramIdx, up);
 }
 
 uint8_t ticksToAdjust = 1;
@@ -136,9 +135,9 @@ void initParam()
   blinkState = true;
   blinkMillis = millis();
   if(edittingGlobalParams){
-    ticksToAdjust = globalParams[globParamIdx].ticksToAdjust;
-    drawScale.init(&globalParams[globParamIdx]);
-    switch(globParamIdx){
+    ticksToAdjust = globalParams[paramIdx].ticksToAdjust;
+    drawScale.init(&globalParams[paramIdx]);
+    switch(paramIdx){
       case BRIGHTNESS:
         drawScale.setValue(brightness);
         break;
@@ -152,8 +151,8 @@ void initParam()
   }
   else
   {
-    ticksToAdjust = CURR_ANIM->getParam(animParamIdx).ticksToAdjust;
-    CURR_ANIM->initParam(animParamIdx);
+    ticksToAdjust = CURR_ANIM->getParam(paramIdx).ticksToAdjust;
+    CURR_ANIM->initParam(paramIdx);
   }
 }
 
@@ -200,8 +199,8 @@ void handleButton()
       changeState(EDIT_DELAY);
     }
     break;
-  case EDIT_DELAY: // Start a new animation
-    if (!isPressed)
+  case EDIT_DELAY: 
+    if (!isPressed) // Did not finish delay, so quick press = new animation
     {
       currAnimationIdx = mod8(currAnimationIdx + 1, NUM_ANIMATIONS);
       initAnimation();
@@ -212,15 +211,15 @@ void handleButton()
     if (isPressed)
     { // Change parameter to Edit
       if(edittingGlobalParams){
-        globParamIdx++;
-        if(globParamIdx >= NUM_GLOBAL_PARAMS){
-          globParamIdx = 0;
+        paramIdx++;
+        if(paramIdx >= NUM_GLOBAL_PARAMS){
+          paramIdx = 0;
           edittingGlobalParams = false;
         }
-      } else {        
-        animParamIdx++;
-        if(animParamIdx >= numAnimParams){
-          animParamIdx = 0;
+      } else {
+        paramIdx++;
+        if(paramIdx >= numAnimParams){
+          paramIdx = 0;
           edittingGlobalParams = true;
         }
       }
@@ -244,31 +243,13 @@ void doFrame()
   FastLED.clear();
   CURR_ANIM->drawBase(elapse);
 
-  if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
+  if ( ui_state == EDIT )
   {
-    blinkMillis = now;
-    blinkState = !blinkState;
-  }
-
-  #ifdef DEBUG
-    //Serial.print("f");
-  #endif
-
-  if (ui_state == EDIT)
-  {
-    drawScale.draw();
-    ledData.leds(0, (NUM_GLOBAL_PARAMS + CURR_ANIM->getNumParams() - 1)) = CRGB::LightSeaGreen;
-
-    uint8_t currParamIdx = edittingGlobalParams? globParamIdx : (NUM_GLOBAL_PARAMS + animParamIdx);
-    if (blinkState)
-    {
-      ledData.leds[currParamIdx] = edittingGlobalParams? globalParams[globParamIdx].scaleColor :
-        CURR_ANIM->getParam(animParamIdx).scaleColor;
+    if (now - blinkMillis >= BLINK_MILLIS){
+      blinkMillis = now;
+      blinkState = !blinkState;
     }
-    else
-    {
-      ledData.leds[currParamIdx] = CRGB::Black;
-    }
+    drawScale.draw(blinkState, edittingGlobalParams, paramIdx);    
   }
 }
 
