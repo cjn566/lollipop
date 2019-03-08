@@ -10,6 +10,7 @@
     
     struct state_t {
         uint8_t saturation = 255;
+        uint8_t fast_scroll_ctr = 2;
         CRGBArray<NUM_LEDS> leds;
     };
 
@@ -27,7 +28,7 @@
         public:
         void setValue(int);
         void turnoff();
-        void init(uint32_t nMax = 256, CRGB = CRGB::Red);
+        void init(uint32_t nMax, CRGB color);
         void init(parameter_t * param_ptr);
         void draw();
     };
@@ -46,8 +47,8 @@
         virtual void        adjParam(uint8_t paramIdx, bool up){};
         virtual void        drawFrame(int16_t){};
 
-        void                adjSpeed(bool up){
-            speed  = CLAMP_S8(speed + INCDEC);
+        void                adjSpeed(int adj){
+            speed  = CLAMP_S8(speed + adj);
             drawScale.setValue(speed);
         }
         

@@ -2,7 +2,7 @@
 #ifndef SETTINGS_H
     #define SETTINGS_H
 
-    //#define DEBUG
+    #define DEBUG
 
     // Pins
     #define ENCODER_A     23
@@ -15,10 +15,19 @@
     #define EDIT_HOLD_MILLIS      700
     #define EDIT_TIMEOUT_MILLIS   4000
     #define BLINK_MILLIS          500
+    #define FAST_SCROLL_MS        60
+    #define FAST_SCROLL_RESET     700
+    #define FAST_SCROLL_MAX       20
 
     // parameter_ts
     #define INIT_BRIGHTNESS   40
-    #define SPEED_SCALE_BASE  80
+
+    #ifdef DEBUG
+        #define SPEED_SCALE_BASE                 80
+    #else
+        #define SPEED_SCALE_BASE                 80
+    #endif
+
     #define BRIGH_ADJ_MULT    3
     #define SPEED_ADJ_MULT    3
     #define SPEED_REDUCTION_FACTOR    2
@@ -27,7 +36,7 @@
 
     // Video
     #ifdef DEBUG
-        #define FPS                 20
+        #define FPS                 150
     #else
         #define FPS                 150
     #endif

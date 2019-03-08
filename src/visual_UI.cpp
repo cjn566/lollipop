@@ -18,18 +18,22 @@ void DrawScale::setValue(int val){
     pValue = CLAMP_SN(val, maxVal);
     active = true;
     #ifdef DEBUG
-        newValue = true;
-        Serial.printf("scale value: %d\n", val);
+        //newValue = true;
+        //Serial.printf("scale value: %d\n", val);
     #endif
 }
 
 void DrawScale::turnoff(){active=false;};
 
-void DrawScale::init(uint32_t nMax, CRGB nColor){
+void DrawScale::init(uint32_t nMax, CRGB color){
     active = false;
-    maxVal = nMax;
+    maxVal = nMax==0? 256 : nMax;
     brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / nMax;
-    onColor = nColor;
+    onColor = color? CRGB::Green : color;
+    
+    #ifdef DEBUG        
+        Serial.printf("Init - argMax: %d\targColor: %d\t max: %d\t color: %d\n", nMax, color, maxVal, onColor);
+    #endif
 }
 
 void DrawScale::init(parameter_t * param_ptr){
@@ -68,10 +72,10 @@ void DrawScale::draw(){
                 }
 
                 #ifdef DEBUG
-                    if(newValue){
-                        newValue = false;
-                        Serial.printf("n: %d\tb: %d\te: %d\tp: %d\tpb: %d\t\n", numFullLeds, begginning, end, partial, remainingBrightness);
-                    }
+                    // if(newValue){
+                    //     newValue = false;
+                    //     Serial.printf("n: %d\tb: %d\te: %d\tp: %d\tpb: %d\t\n", numFullLeds, begginning, end, partial, remainingBrightness);
+                    // }
                 #endif
                 ledData.leds[partial] = ledData.leds[partial].lerp8(onColor, remainingBrightness);
             }

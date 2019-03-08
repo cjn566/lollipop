@@ -16,8 +16,8 @@
         };
 
         // params vars
-        uint8_t deltaHue = 3;
-        uint8_t numSpokes = 3;
+        uint8_t deltaHue;
+        uint8_t numSpokes = 2;
         int8_t skew = 0;
 
         // state vars
@@ -103,17 +103,17 @@
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
 
+
                 if(anglePlusRotation > halfAngleBetweenSpokes){
                     anglePlusRotation = angleBetweenSpokes - anglePlusRotation;
+                    anglePlusRotation += ((skew * i)/8);
+                } else {
+                    anglePlusRotation -= ((skew * i)/8);
                 }
-                
-                uint8_t angleWithFullHueMultplier = anglePlusRotation * deltaHue;
-                
-                int top = (int)skew * i;
-                int adjustment = top >> 5;
 
-                uint8_t withSkew = angleWithFullHueMultplier + adjustment;
-                ledData.leds[i] = CHSV(withSkew, ledData.saturation, 255);
+
+                anglePlusRotation = anglePlusRotation * deltaHue;
+                ledData.leds[i] = CHSV(anglePlusRotation, ledData.saturation, 255);
             }
         }
     };

@@ -27,22 +27,22 @@ DrawScale drawScale;
 state_t ledData;
 
 // -------- ANIMATIONS ---------------
-#define NUM_ANIMATIONS 2
+#define NUM_ANIMATIONS 3
 #include "Animations/peppermint.cpp"
 #include "Animations/rainbow.cpp"
 //#include "Animations/indices.cpp"
-//#include "Animations/particles.cpp"
+#include "Animations/particles.cpp"
 
 
 Peppermint peppermint = Peppermint();
 Rainbow rainbow = Rainbow();
 //Indices indices = Indices();
-//Particles particles = Particles();
+Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
-    &peppermint,
+    &particles,
     &rainbow,
-    //&particles,
+    &peppermint,
     //&indices
     };
 #define CURR_ANIM allAnims[currAnimationIdx]
@@ -104,27 +104,25 @@ enum GlobalParams
 parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
     parameter_t{CRGB::Gold}, // Brightness
     parameter_t{CRGB::Green, 127},   // Speed
-    parameter_t{CRGB::CadetBlue} // Saturation
+    parameter_t{CRGB::Black} // Saturation
 };
 
 void changeValue(bool up)
 {
   if(edittingGlobalParams){
+    int adj = (INCDEC * ledData.fast_scroll_ctr) >> 1;
     switch (globParamIdx)
     {
     case BRIGHTNESS:
-      brightness = CLAMP_8(brightness + ((brightness > BRIGHT_MACRO_ADJ_THRESH) ? (BRIGH_ADJ_MULT * INCDEC) : INCDEC));
+      brightness = CLAMP_8(brightness + adj);
       FastLED.setBrightness(brightness);
-      #ifdef DEBUG
-        Serial.printf("b: %d\n", brightness);
-      #endif
       drawScale.setValue(brightness);
       break;
     case SPEED:
-      CURR_ANIM->adjSpeed(up);
+      CURR_ANIM->adjSpeed(adj);
       break;
     case SATURATION:
-      ledData.saturation = CLAMP_8(ledData.saturation + INCDEC);
+      ledData.saturation = CLAMP_8(ledData.saturation + adj);
       drawScale.setValue(ledData.saturation);
     }
   }
@@ -239,12 +237,12 @@ void doFrame()
 {
   long now = millis();
   long elapse = now - elapseMillis;
+  if(elapse > 50) elapse = 50;
   elapseMillis = now;
 
   FastLED.show();
   FastLED.clear();
   CURR_ANIM->drawBase(elapse);
-  //CURR_ANIM->drawFrame(elapse);
 
   if ((ui_state == EDIT) && (now - blinkMillis >= BLINK_MILLIS))
   {
@@ -265,7 +263,7 @@ void doFrame()
     if (blinkState)
     {
       ledData.leds[currParamIdx] = edittingGlobalParams? globalParams[globParamIdx].scaleColor :
-                                                         CURR_ANIM->getParam(animParamIdx).scaleColor;
+        CURR_ANIM->getParam(animParamIdx).scaleColor;
     }
     else
     {
@@ -275,7 +273,6 @@ void doFrame()
 }
 
 //-------------- THE LOOP -------------------------
-
 void loop()
 {
   long now = millis();
@@ -304,9 +301,16 @@ void loop()
       int8_t newPosition = encoder.read();
       if ((abs8(newPosition)>>2) >= ticksToAdjust)
       {
-        changeValue(newPosition >= ticksToAdjust);
         encoder.write(0);
+
+        int delay = now - lastActivityMillis;
+        if(delay < FAST_SCROLL_MS){
+          ledData.fast_scroll_ctr = CLAMP_UN_0(ledData.fast_scroll_ctr+1, FAST_SCROLL_MAX) ;
+        } else if( delay > FAST_SCROLL_RESET){
+          ledData.fast_scroll_ctr = 2;
+        }
         lastActivityMillis = now;
+        changeValue(newPosition >= ticksToAdjust);
       }
     }
   }

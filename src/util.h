@@ -10,6 +10,7 @@
     
 
     #define INCDEC (up?1:-1)
+    #define FAST_SCROLL ((INCDEC * ledData.fast_scroll_ctr) >> 1)
 
     
     #define LOGD(s) Serial.print(s);
@@ -20,5 +21,6 @@
 
     #define SCALE32_BY_8(n, s) (((int)s * (int)n) / 256)
     #define SCALE32_TO_8(n, s) ((256 * (int)n) / s)
+
     
 #endif
