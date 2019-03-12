@@ -14,7 +14,7 @@ struct Particles: public AnimationBase{
 
     #define MAX_VELOC (1 << (LOC_REDUCTION) + 1)                
     #define VEL_LEFT_SH         6
-    #define ACCEL_RIGHT_SH      9
+    #define ACCEL_RIGHT_SH      10
     #define LOC_REDUCTION   12
 
     #define LS_LEFT_SH      10
@@ -43,15 +43,15 @@ struct Particles: public AnimationBase{
     } mode = WRAP;
 
     // params vars
-    uint8_t lifespan = 10;
-    uint8_t spawnRate = 10;
-    uint8_t spawnRateVar = 255;
-    int8_t velocity = 0;
-    uint8_t velocityVar = 60;
+    uint8_t lifespan = 255;
+    uint8_t spawnRate = 255;
+    uint8_t spawnRateVar = 0;
+    int8_t velocity = 1;
+    uint8_t velocityVar = 0;
     int8_t acceleration = 0;
-    uint8_t accelVar = 20;
+    uint8_t accelVar = 0;
     int8_t hueCycleRate = 2;
-    uint8_t hueVar = 40;
+    uint8_t hueVar = 0;
 
     // state vars
     uint32_t     realLifespan;
@@ -235,12 +235,24 @@ struct Particles: public AnimationBase{
                 }
                 uint8_t loc_idx = (location >> (LOC_REDUCTION + 8)) + 1;
                 uint16_t loc_fractional = (location >> LOC_REDUCTION) & 0xff;
-                
-                ledData.leds[loc_idx - 1] += CHSV(particle[i].hue, ledData.saturation, 255 - loc_fractional);
+
+                int numspread = scale_to_n(veloc, MAX_VELOC, 4) + 1;
+                //Serial.printf("%d - ", numspread);
+                int fullFractionalValue = 256/numspread;
+                for(int i = 1; i<=numspread; i++){
+                    uint8_t scaledFraction = scale_to_n((int)loc_fractional, 255, fullFractionalValue);
+                    uint8_t forwardValue =  (numspread - i ) * fullFractionalValue + scaledFraction;
+                    uint8_t revValue =  (numspread - i + 1) * fullFractionalValue - scaledFraction;
+                    if(loc_idx + i < ENDPOINT){
+                        ledData.leds[loc_idx + i] += CHSV(particle[i].hue, ledData.saturation, forwardValue);
+                    }
+                    if(loc_idx - i > 0)
+                        ledData.leds[loc_idx - i] += CHSV(particle[i].hue, ledData.saturation, revValue);
+                }
                 ledData.leds[loc_idx] += CHSV(particle[i].hue, ledData.saturation, 255);
-                ledData.leds[loc_idx + 1] += CHSV(particle[i].hue, ledData.saturation, loc_fractional);
             }
         }
+        //Serial.println();
     }
 };
 
