@@ -4,26 +4,18 @@ struct Particles: public AnimationBase{
 
     
     #ifdef DEBUG
-        #define MAX_PARTICLES 2
+        #define MAX_PARTICLES 80
     #else
-        #define MAX_PARTICLES 70
+        #define MAX_PARTICLES 80
     #endif
 
-    #define ACCEL_W  5
-    #define VEL_W    5
-    #define HUE_W    8
-    #define TS_W    14
-    #if ACCEL_W + VEL_W + HUE_W + TS_W != 32
-        #error Particle bits not equal to 32!
-    #endif
+    #define TS_W        16
     #define TS_TRUNC    3
-    #define HUE_SH   (ACCEL_W + VEL_W)
-    #define TS_SH   (HUE_SH + HUE_W)
     #define TS_MOD MAX_UVAL_N_BITS(TS_W)
-    #define VEL_LEFT_SH         7
-    #define ACCEL_RIGHT_SH      2
-    #define LS_LEFT_SH      2
-    #define LOC_REDUCTION   6
+
+
+
+    #define LS_LEFT_SH      10
     #define HUE_CTR_MULT   2
     #define LOC_MAX (ENDPOINT << (LOC_REDUCTION + 8))
     #define ENDPOINT 193
@@ -49,27 +41,29 @@ struct Particles: public AnimationBase{
     } mode = WRAP;
 
     // params vars
-    uint8_t lifespan = 20;
-    uint8_t spawnRate = 40;
+    uint8_t lifespan = 255;
+    uint8_t spawnRate = 180;
     uint8_t spawnRateVar = 0;
-    int8_t velocity = 30;
-    uint8_t velocityVar = 255;
-    int8_t acceleration = 0;
-    uint8_t accelVar = 255;
-    uint8_t hueVar = 80;
-    int8_t hueCycleRate = 0;
+    int8_t velocity = 127;
+    uint8_t velocityVar = 0;
+    int8_t acceleration = 127;
+    uint8_t accelVar = 0;
+    uint8_t hueVar = 0;
+    int8_t hueCycleRate = 80 << HUE_CTR_MULT;
 
     // state vars
     int      maxAge = 0;
-    int      baseVelocity;
-    int      baseAccel;
     uint32_t     realLifespan;
     uint16_t hue = 0;
     uint8_t numParticles = 0, newParticleIdx = 0;
     unsigned int spawnDelay, counter = 0, thisSpawnDelay;
 
-    
-    uint32_t particle[MAX_PARTICLES];
+    struct Particle{
+        uint32_t birthtime;
+        uint8_t start_loc, hue;
+        int8_t vel_mod, accel_mod;
+    } particle[MAX_PARTICLES];
+    //uint32_t particle[MAX_PARTICLES];
     
 
 
@@ -80,7 +74,7 @@ struct Particles: public AnimationBase{
         params[MODE].max = 3;
         params[MODE].ticksToAdjust = 3;
         params[VELOCITY].max = 127;
-        params[ACCELERATION].max = (2<<(8-ACCEL_RIGHT_SH))-1;
+        params[ACCELERATION].max = 127;
         params[COLOR_CYCLE_RATE].max = 20;
 
         params[SPAWN_RATE].scaleColor = CRGB::DarkBlue;
@@ -94,16 +88,15 @@ struct Particles: public AnimationBase{
     };
 
     void initAnim(){
-        random16_add_entropy(millis() & MAKE_MASK(16));
+        random16_add_entropy(millis() & MAKE_MASK(TS_W));
 
         spawnDelay = spawnRate * SPEED_SCALE_BASE * 8;
         thisSpawnDelay = spawnDelay;
         realLifespan = lifespan << LS_LEFT_SH;
 
-        for(int i =0; i<MAX_PARTICLES; i++) particle[i] = 0; // Reset Particles
+        for(int i =0; i<MAX_PARTICLES; i++) particle[i].birthtime = 0; // Reset Particles
         numParticles = 0;
         #ifdef DEBUG
-            Serial.printf("Max age: %d ms\n", TS_MOD);
         #endif
     }
 
@@ -141,7 +134,6 @@ struct Particles: public AnimationBase{
 
             case VELOCITY:
                 velocity = CLAMP_S8(velocity + change);
-                baseVelocity = velocity << VEL_LEFT_SH;
                 return velocity;
 
             case VELOCITY_VAR:
@@ -149,7 +141,7 @@ struct Particles: public AnimationBase{
                 return velocityVar;
 
             case ACCELERATION:
-                acceleration = clamp_sn(acceleration + change, params[ACCELERATION].max);
+                acceleration = CLAMP_S8(acceleration + change);
                 return acceleration;
 
             case ACCELERATION_VAR:
@@ -161,46 +153,9 @@ struct Particles: public AnimationBase{
         return 0;
     }
 
-    struct P_values {
-        unsigned long timestamp;
-        uint8_t hue;
-        int8_t velocity;
-        int8_t accel;
-    };
-
-    uint32_t collapseP(P_values p_values){
-        uint32_t p;
-        p =  (p_values.timestamp << TS_SH);
-        p |= (p_values.hue       << HUE_SH);
-        p |= ((p_values.velocity & MAKE_MASK(VEL_W)) << ACCEL_W);
-        p |= (p_values.accel & MAKE_MASK(ACCEL_W));
-        return p;
-    };
-
-    P_values expandP(uint32_t p){
-        P_values p_values;
-        p_values.timestamp   = (p >> TS_SH);
-        p_values.hue        = (p >> HUE_SH) & MAKE_MASK(HUE_W);
-        p_values.velocity   = ((p >> (ACCEL_W + VEL_W - 8)) & 0xff) >> (8-VEL_W);
-        p_values.accel      = p & MAKE_MASK(ACCEL_W);
-        return p_values;
-    };
-
     void killParticle(int i){
-        particle[i] = 0;
+        particle[i].birthtime = 0;
         numParticles--;
-    }
-
-    int getVelocity(int velRandomness){
-        velRandomness = velRandomness << (8-VEL_W);
-        velRandomness -= 127;
-        return (velocity + velRandomness) << VEL_LEFT_SH;
-    }
-
-    int getAccel(int accelRandomness){
-        accelRandomness = accelRandomness << (8- ACCEL_W - ACCEL_RIGHT_SH);
-        accelRandomness -= (params[ACCELERATION].max >> 1);
-        return (acceleration + accelRandomness);
     }
 
     void drawFrame(int16_t millisSinceLastFrame){
@@ -217,35 +172,28 @@ struct Particles: public AnimationBase{
                 variance /= (256*127);
                 thisSpawnDelay = spawnDelay + variance;
                 
-                while(particle[newParticleIdx]){	// Find next available slot
+                while(particle[newParticleIdx].birthtime){	// Find next available slot
                     newParticleIdx = (newParticleIdx + 1) % MAX_PARTICLES;
                 }
                 // Build new particle
-                numParticles++;                
-                P_values p_values;
+                numParticles++;
 
-                int velMax = (1<<(VEL_W-1))-1;
+                bool randStart = true;
 
+                uint8_t loc_rand = 0;
+                if(randStart) loc_rand = random8() % ENDPOINT;
                 int hueRand = scale8(random8(), hueVar);
                 int velRand = scale_by_n(random8()-127, (int)velocityVar, 255);
-                velRand = scale_to_n(velRand, 127, velMax);
+                int accelRand = scale_by_n(random8()-127, (int)accelVar, 255);
 
-                int accelRand = scale8(random8()-127, accelVar);
-                accelRand = scale_to_n(accelRand, 255, (1<<ACCEL_W)-1);
-
-                #ifdef DEBUG
-                    Serial.printf("velrand:\t%d of %d\naccelrand:\t%d of %d\n", velRand, velMax, accelRand, (1<<ACCEL_W)-1);
-                #endif
-
-                p_values.timestamp  = now;
-                p_values.hue        = (uint8_t)(hue >> HUE_CTR_MULT) + hueRand;
-                p_values.velocity   = velRand;
-                p_values.accel      = accelRand;
-                particle[newParticleIdx] = collapseP(p_values);
+                particle[newParticleIdx].birthtime  = now;
+                particle[newParticleIdx].start_loc  = loc_rand;
+                particle[newParticleIdx].hue        = (uint8_t)(hue >> HUE_CTR_MULT) + hueRand;
+                particle[newParticleIdx].vel_mod     = velRand;
+                particle[newParticleIdx].accel_mod   = accelRand;
 
                 #ifdef DEBUG
-                    P_values testValues = expandP(particle[newParticleIdx]);
-                    Serial.printf("unpacked:\t%d\naccelrand:\t%d\n\n", testValues.velocity, testValues.accel);
+                    //P_values testValues = expandP(particle[newParticleIdx]);
                 #endif
 
                 hue += hueCycleRate;
@@ -254,36 +202,45 @@ struct Particles: public AnimationBase{
 
         for (int i = 0; i < MAX_PARTICLES; i++){
                 //Serial.print(particle[i].active? 'p':'-');
-            if(particle[i]){
-                P_values pv = expandP(particle[i]);
-                unsigned long age = (now - pv.timestamp);
+            if(particle[i].birthtime){
+                unsigned long age = (now - particle[i].birthtime);
 
                 #ifdef DEBUG
-                    //Serial.printf("idx: %d\tts: %d\t  pre-mod age: %d\t", i, pv.timestamp, age);
+                    //Serial.printf("idx: %d\tbirthtime: %d\t  pre-mod age: %d\n", i, particle[i].birthtime, age);
                 #endif
-
+                    // Serial.print("boop\n");
 
                 if(age < 0){
-                    if(age > -OVFL_TIME_CUTOFF) // Particle is within one second of overflowing age counter, so retire it
-                    { 
-                        killParticle(i);
-                        continue;
-                    }
                     age += TS_MOD;
                 }
 
-                age = scale_by_n((int)age, (int)speed, 255);
+                age *= speed;
                 if(age > realLifespan){
-                     killParticle(i);
-                     continue;
+                    killParticle(i);
+                    continue;
                 }
                 
-                if(!age) age = 1;
-                int velDist = getVelocity(pv.velocity) * age;
-                int accelDist = (getAccel(pv.accel) * age * age) >> 1;
-                int location = velDist + accelDist;
+                if(!age){
+                    age = 1;
+                }
+                #define MAX_VELOC (1 << (LOC_REDUCTION) + 1)                
+                #define VEL_LEFT_SH         6
+                #define ACCEL_RIGHT_SH      9
+                #define LOC_REDUCTION   12
 
-                
+                //Serial.printf("vel: %d + mod: %d = %d", velocity, particle[i].vel_mod, velocity + particle[i].vel_mod);
+                int veloc = (velocity + particle[i].vel_mod) << VEL_LEFT_SH;
+                //Serial.printf("<< %d\n", veloc);
+                //Serial.printf("accel: %d + mod: %d ", acceleration, particle[i].accel_mod);
+                //int accelVeloc = (((acceleration + particle[i].accel_mod) * age) >> ACCEL_RIGHT_SH);
+                //int accelSum = acceleration + particle[i].accel_mod;
+                int fullAccel = (acceleration + particle[i].accel_mod) * age;
+                //Serial.printf("%d\n", fullAccel);
+                int reducedAccel = fullAccel >> ACCEL_RIGHT_SH;
+                veloc = clamp_sn(veloc + reducedAccel, MAX_VELOC);
+                int location = veloc * age;
+
+                if(particle[i].start_loc) location += ((LOC_MAX/255) * particle[i].start_loc);
 
                 while((location > LOC_MAX) || (location < 0)){
                     bool under = (location < 0);
@@ -302,17 +259,19 @@ struct Particles: public AnimationBase{
                             break;
                     }
                 }
+                    // Serial.print("boop\n");
                 uint8_t loc_idx = (location >> (LOC_REDUCTION + 8)) + 1;
                 uint16_t loc_fractional = (location >> LOC_REDUCTION) & 0xff;
 
+                    // Serial.print("boop\n");
                 #ifdef DEBUG
                     //Serial.printf("new age: %d\tloc: %d\n", age, location);
                 #endif
                 
-                if(particle[i]){
-                    ledData.leds[loc_idx - 1] += CHSV(pv.hue, ledData.saturation, 255 - loc_fractional);//leftVal);
-                    ledData.leds[loc_idx] += CHSV(pv.hue, ledData.saturation, 255);//leftVal);
-                    ledData.leds[loc_idx + 1] += CHSV(pv.hue, ledData.saturation, loc_fractional);//leftVal);
+                if(particle[i].birthtime){
+                    ledData.leds[loc_idx - 1] += CHSV(particle[i].hue, ledData.saturation, 255 - loc_fractional);
+                    ledData.leds[loc_idx] += CHSV(particle[i].hue, ledData.saturation, 255);
+                    ledData.leds[loc_idx + 1] += CHSV(particle[i].hue, ledData.saturation, loc_fractional);
                 }
             }
         }

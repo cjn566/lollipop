@@ -2,7 +2,7 @@
 #ifndef SETTINGS_H
     #define SETTINGS_H
 
-    #define DEBUG
+    //#define DEBUG
     
 
     // Pins
@@ -44,7 +44,7 @@
 
     // Video
     #ifdef DEBUG
-        #define FPS                 100
+        #define FPS                 20
     #else
         #define FPS                 150
     #endif
