@@ -61,8 +61,8 @@ Particles particles = Particles();
 
 AnimationBase *allAnims[NUM_ANIMATIONS] = {
     &particles,
-    &rainbow,
     &peppermint,
+    &rainbow,
     //&indices
     };
 #define CURR_ANIM allAnims[currAnimationIdx]

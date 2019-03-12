@@ -39,6 +39,8 @@
             params[SPOKE].ticksToAdjust = 2;
             params[SPOKE].scaleColor = CRGB::OrangeRed;
 
+            params[BASE_HUE].type = HUE;
+
             params[D_HUE].max = MAX_SPOKES;
             params[D_HUE].ticksToAdjust = 2;
             params[D_HUE].scaleColor = CRGB::PaleVioletRed;
@@ -48,7 +50,7 @@
             params[SKEW].scaleColor = CRGB::Purple;
 
             params[WHITE_MODE].max = 1;
-            params[WHITE_MODE].isChunks = true;
+            params[WHITE_MODE].type = BOOL;
             params[WHITE_MODE].ticksToAdjust = 3;
             params[WHITE_MODE].scaleColor = CRGB::White;
         };
@@ -71,7 +73,7 @@
                     initAnim();
                     return numSpokes;
                 case BASE_HUE:
-                    baseHue = CLAMP_8(baseHue + change);
+                    baseHue += change;
                     return baseHue;
                 case D_HUE:
                     deltaHue = clamp_un1(deltaHue + change, numSpokes<<1);
@@ -80,7 +82,7 @@
                     skew = clamp_sn(skew + change, MAX_SKEW);
                     return skew;
                 case WHITE_MODE:
-                    white_mode = clamp_un0(skew + change, 1);
+                    white_mode = clamp_un0(white_mode + change, 1);
                     return white_mode;
                 default: return 0;
             }

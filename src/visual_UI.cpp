@@ -1,4 +1,5 @@
 #include "Animation.h"
+#include "Radii.h"
 
 #define RIGHT_OF_MID_IDX    67
 #define SCALE_HALF_SIZE     8
@@ -99,14 +100,20 @@ void DrawScale::draw(){
 
     switch(type){
         case CHUNKS:
+        {
             int numLeds = brightnessPointsPerValue / 256;
             ledData.leds(SCALE_START_IDX + (pValue*numLeds), SCALE_START_IDX + ((pValue + 1) * numLeds))  = currColor;
             break;
+        }
         case BOOL:
             ledData.leds(pValue? SCALE_START_IDX : RIGHT_OF_MID_IDX, pValue? RIGHT_OF_MID_IDX - 1: SCALE_END_IDX)  = currColor;
             break;
         case HUE:
-            
+            for(int i = 0; i <= 86; i++){
+                uint8_t hueVal = radii[i][ANGLE];
+                bool close = abs(hueVal - pValue) <= 6;
+                ledData.leds[i] = CHSV(hueVal, close? 0 : 255, 255);
+            }
             break;
         case OTHER:
             if(pValue != 0){

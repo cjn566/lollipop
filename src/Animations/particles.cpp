@@ -8,11 +8,10 @@ struct Particles: public AnimationBase{
         #define MAX_PARTICLES 80
     #endif
 
-    #define TS_W        16
     #define TS_TRUNC    3
     #define TS_MOD MAX_UVAL_N_BITS(TS_W)
 
-    #define MAX_VELOC (1 << (LOC_REDUCTION) + 1)                
+    #define MAX_VELOC (1 << (LOC_REDUCTION) + 2)                
     #define VEL_LEFT_SH         6
     #define ACCEL_RIGHT_SH      10
     #define LOC_REDUCTION   12
@@ -25,6 +24,7 @@ struct Particles: public AnimationBase{
 
     enum ParamName {
         MODE,
+        RAND_START,
         LIFESPAN,
         SPAWN_RATE,
         SPAWN_RATE_VAR,
@@ -40,22 +40,23 @@ struct Particles: public AnimationBase{
         WRAP,
         BOUNCE,
         DIE
-    } mode = WRAP;
+    } mode = BOUNCE;
 
     // params vars
-    uint8_t lifespan = 255;
-    uint8_t spawnRate = 255;
-    uint8_t spawnRateVar = 0;
-    int8_t velocity = 1;
-    uint8_t velocityVar = 0;
+    bool randstart = true;
+    uint8_t lifespan = 30;
+    uint8_t spawnRate = 20;
+    uint8_t spawnRateVar = 255;
+    int8_t velocity = 0;
+    uint8_t velocityVar = 60;
     int8_t acceleration = 0;
-    uint8_t accelVar = 0;
-    int8_t hueCycleRate = 2;
-    uint8_t hueVar = 0;
+    uint8_t accelVar = 30;
+    int8_t hueCycleRate = 1;
+    uint8_t hueVar = 20;
 
     // state vars
     uint32_t     realLifespan;
-    uint16_t hue = 0;
+    uint8_t hue = 120;
     uint8_t numParticles = 0, newParticleIdx = 0;
     unsigned int spawnDelay, counter = 0, thisSpawnDelay;
 
@@ -64,18 +65,21 @@ struct Particles: public AnimationBase{
         uint8_t start_loc, hue;
         int8_t vel_mod, accel_mod;
     } particle[MAX_PARTICLES];
-
+    
     public:
     Particles(){
-        numParams = 10;
+        numParams = 11;
         params = new parameter_t[numParams];
         params[MODE].max = 2;
-        params[MODE].scaleColor = CRGB::Amethyst;
-        params[MODE].isChunks = true;
+        params[MODE].scaleColor = CRGB::Red;
+        params[MODE].type = CHUNKS;
         params[MODE].ticksToAdjust = 3;
+        params[RAND_START].scaleColor = CRGB::DarkSeaGreen;
+        params[RAND_START].type = BOOL;
+        params[RAND_START].ticksToAdjust = 3;
         params[VELOCITY].max = 127;
         params[ACCELERATION].max = 127;
-        params[COLOR_CYCLE_RATE].max = 20;
+        params[COLOR_CYCLE_RATE].max = 16;
 
         params[SPAWN_RATE].scaleColor       = CRGB::DarkBlue;
         params[SPAWN_RATE_VAR].scaleColor   = CRGB::LightBlue;
@@ -92,7 +96,7 @@ struct Particles: public AnimationBase{
     };
 
     void initAnim(){
-        random16_add_entropy(millis() & MAKE_MASK(TS_W));
+        random16_add_entropy(millis() & 0xffff);
         thisSpawnDelay = getSpawnDelay();
         realLifespan = lifespan << LS_LEFT_SH;
 
@@ -106,10 +110,13 @@ struct Particles: public AnimationBase{
         random16_add_entropy(millis() & MAKE_MASK(16));
         switch(paramIdx){
             case MODE:
-            {
                 mode = (Mode)clamp_un0(mode + (change > 0? 1:-1), 2);
                 return mode;
-            }
+
+            case RAND_START:
+                randstart = change? !randstart : randstart;
+                return randstart;
+                
             case LIFESPAN:
                 lifespan = CLAMP_8(lifespan + change);
                 realLifespan = lifespan << LS_LEFT_SH;
@@ -159,7 +166,7 @@ struct Particles: public AnimationBase{
     }
 
     void drawFrame(int16_t millisSinceLastFrame){
-        unsigned long now = (millis() >> TS_TRUNC) & MAKE_MASK(TS_W);
+        unsigned long now = millis() >> TS_TRUNC;
 
         // Spawn
         if(numParticles < MAX_PARTICLES){     
@@ -178,14 +185,15 @@ struct Particles: public AnimationBase{
                 // Build new particle
                 numParticles++;
 
-                uint8_t loc_rand = random8() % ENDPOINT;
+                uint8_t loc_rand = 0;
+                if(randstart) loc_rand = random8() % ENDPOINT;
                 int hueRand = scale8(random8(), hueVar);
                 int velRand = scale_by_n(random8()-127, (int)velocityVar, 255);
                 int accelRand = scale_by_n(random8()-127, (int)accelVar, 255);
 
                 particle[newParticleIdx].birthtime  = now;
                 particle[newParticleIdx].start_loc  = loc_rand;
-                particle[newParticleIdx].hue        = (uint8_t)(hue >> HUE_CTR_MULT) + hueRand;
+                particle[newParticleIdx].hue        = hue + hueRand;
                 particle[newParticleIdx].vel_mod     = velRand;
                 particle[newParticleIdx].accel_mod   = accelRand;
                 
@@ -196,11 +204,8 @@ struct Particles: public AnimationBase{
         for (int i = 0; i < MAX_PARTICLES; i++){
             if(particle[i].birthtime){
                 unsigned long age = (now - particle[i].birthtime);
-                if(age < 0){
-                    age += TS_MOD;
-                }
                 age *= speed;
-                if(age > realLifespan){
+                if(lifespan < 255 && age > realLifespan){
                     killParticle(i);
                     continue;
                 }                
@@ -216,7 +221,14 @@ struct Particles: public AnimationBase{
 
                 if(particle[i].start_loc) location += ((LOC_MAX/255) * particle[i].start_loc);
 
-                while((location > LOC_MAX) || (location < 0)){
+                if(mode == DIE && location < 0){
+                    location += LOC_MAX;
+                    if((location > LOC_MAX) || (location < 0)) {
+                        killParticle(i);
+                        continue;
+                    }
+                }
+                else while((location > LOC_MAX) || (location < 0)){
                     bool under = (location < 0);
                     switch (mode)
                     {
@@ -239,15 +251,15 @@ struct Particles: public AnimationBase{
                 int numspread = scale_to_n(veloc, MAX_VELOC, 4) + 1;
                 //Serial.printf("%d - ", numspread);
                 int fullFractionalValue = 256/numspread;
-                for(int i = 1; i<=numspread; i++){
-                    uint8_t scaledFraction = scale_to_n((int)loc_fractional, 255, fullFractionalValue);
-                    uint8_t forwardValue =  (numspread - i ) * fullFractionalValue + scaledFraction;
-                    uint8_t revValue =  (numspread - i + 1) * fullFractionalValue - scaledFraction;
-                    if(loc_idx + i < ENDPOINT){
-                        ledData.leds[loc_idx + i] += CHSV(particle[i].hue, ledData.saturation, forwardValue);
+                uint8_t scaledFraction = scale_to_n((int)loc_fractional, 255, fullFractionalValue);
+                for(int j = 1; j<=numspread; j++){
+                    uint8_t forwardValue =  (numspread - j ) * fullFractionalValue + scaledFraction;
+                    uint8_t revValue =  (numspread - j + 1) * fullFractionalValue - scaledFraction;
+                    if(loc_idx + j < ENDPOINT){
+                        ledData.leds[loc_idx + j] += CHSV(particle[i].hue, ledData.saturation, forwardValue);
                     }
                     if(loc_idx - i > 0)
-                        ledData.leds[loc_idx - i] += CHSV(particle[i].hue, ledData.saturation, revValue);
+                        ledData.leds[loc_idx - j] += CHSV(particle[i].hue, ledData.saturation, revValue);
                 }
                 ledData.leds[loc_idx] += CHSV(particle[i].hue, ledData.saturation, 255);
             }
