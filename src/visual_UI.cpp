@@ -92,7 +92,7 @@ void DrawScale::draw(){
         ledData.leds(currParamLedIdx, currParamLedIdx -1 + LEDS_PER_SLCTR) = CRGB::Black;
     }
     
-    ledData.leds(SCALE_START_IDX, SCALE_START_IDX + (SCALE_HALF_SIZE*2) - 1) = CRGB::White;
+    ledData.leds(SCALE_START_IDX, SCALE_START_IDX + (SCALE_HALF_SIZE*2) - 1) = (currColor.r == 0xff && currColor.g == 0xff &&currColor.b == 0xff)? CRGB::Black : CRGB::White;
     ledData.leds[SCALE_START_IDX - 1] = CRGB::Red;
     ledData.leds[SCALE_START_IDX + (SCALE_HALF_SIZE*2)] = CRGB::Red;
 

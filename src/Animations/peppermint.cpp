@@ -13,7 +13,8 @@
             SPOKE,
             BASE_HUE,
             D_HUE,
-            SKEW
+            SKEW,
+            WHITE_MODE
         };
 
         // params vars
@@ -21,6 +22,7 @@
         uint8_t baseHue = 0;
         uint8_t numSpokes = 2;
         int8_t skew = 0;
+        bool white_mode = false;
 
         // state vars
         uint8_t currAngle = 0;
@@ -31,7 +33,7 @@
 
         public:
         Peppermint(){
-            numParams = 4;
+            numParams = 5;
             params = new parameter_t[numParams];
             params[SPOKE].max = MAX_SPOKES;
             params[SPOKE].ticksToAdjust = 2;
@@ -44,6 +46,11 @@
             params[SKEW].max = MAX_SKEW;
             params[SKEW].ticksToAdjust = 2;
             params[SKEW].scaleColor = CRGB::Purple;
+
+            params[WHITE_MODE].max = 1;
+            params[WHITE_MODE].isChunks = true;
+            params[WHITE_MODE].ticksToAdjust = 3;
+            params[WHITE_MODE].scaleColor = CRGB::White;
         };
 
         void initAnim(){
@@ -72,6 +79,9 @@
                 case SKEW:
                     skew = clamp_sn(skew + change, MAX_SKEW);
                     return skew;
+                case WHITE_MODE:
+                    white_mode = clamp_un0(skew + change, 1);
+                    return white_mode;
                 default: return 0;
             }
         }
@@ -96,7 +106,10 @@
 
 
                 anglePlusRotation = anglePlusRotation * deltaHue;
-                ledData.leds[i] = CHSV(baseHue + anglePlusRotation, ledData.saturation, 255);
+                if(white_mode)
+                    ledData.leds[i] = CHSV(baseHue, anglePlusRotation, 255);
+                else
+                    ledData.leds[i] = CHSV(baseHue + anglePlusRotation, ledData.saturation, 255);
             }
         }
     };
