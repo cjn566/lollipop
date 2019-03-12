@@ -1,102 +1,122 @@
 #include "Animation.h"
 
-#define RIGHT_OF_MID_IDX 67
-#define SCALE_HALF_SIZE 8
+#define RIGHT_OF_MID_IDX    67
+#define SCALE_HALF_SIZE     8
+#define ROW_2_CTR_POS       104
+#define ROW_3_CTR           134
+#define BLINK_SHIFT         9
+
+#define DFLT_HUE              0
+#define LEDS_PER_SLCTR      2
 
 #define SCALE_START_IDX (RIGHT_OF_MID_IDX - SCALE_HALF_SIZE)
 #define SCALE_END_IDX   (RIGHT_OF_MID_IDX + SCALE_HALF_SIZE - 1)
 #define SCALE_FULL_SIZE (SCALE_HALF_SIZE*2)
+#define ROW_2_START_IDX (ROW_2_CTR_POS - ((NUM_GLOBAL_PARAMS / 2) * LEDS_PER_SLCTR) - 1)
 
-#define DFLT_COLOR CRGB::Green
+
 
 int pValue;
 int maxVal;
 bool isGlobal;
-uint8_t paramIdx, numAnimParams, biggest;
+uint8_t paramIndex, nAnimParams, mostParams, currParamLedIdx, row3startIdx;
 parameter_t * globParams;
 AnimationBase * animation;
 uint16_t brightnessPointsPerValue;
-CRGB globColors[NUM_GLOBAL_PARAMS];
-CRGB *paramColors;
+CRGB globColors[NUM_GLOBAL_PARAMS * LEDS_PER_SLCTR];
+CRGB * paramColors;
+CRGB currColor;
 
-DrawScale::DrawScale(parameter_t * globParamsArg){
+void DrawScale::init(parameter_t * globParamsArg){
     globParams = globParamsArg;
     for(int i = 0; i< NUM_GLOBAL_PARAMS; i++){
-        globColors[i] = globParams[i].scaleColor;
+        for(int j = 0; j< LEDS_PER_SLCTR; j++){
+            int idx = (i*LEDS_PER_SLCTR) + j;
+            globColors[idx] = globParams[i].scaleColor;
+        }
     }
 };
 
 void DrawScale::setAnimation(AnimationBase *animationArg){
     animation = animationArg;
-    numAnimParams = animation->getNumParams;
-    if(numAnimParams > biggest){
+    nAnimParams = animation->getNumParams();
+    if(nAnimParams > mostParams){
         delete [] paramColors;
-        biggest = numAnimParams;
-        paramColors = new CRGB[biggest];
+        mostParams = nAnimParams;
+        paramColors = new CRGB[mostParams * LEDS_PER_SLCTR];
     }
-    for(int i = 0; i<biggest; i++){
-        paramColors[i] = animation->getParam(i).scaleColor;
-        if(!paramColors[i]) paramColors[i] = DFLT_COLOR;
+    for(int i = 0; i<nAnimParams; i++){
+        CRGB c = animation->getParam(i).scaleColor;
+        if(!(c.r || c.b ||c.g)){
+            Serial.printf("no C\n");
+            c = CHSV(DFLT_HUE + (i* 80), 255,255);
+        }
+        for(int j = 0; j< LEDS_PER_SLCTR; j++){
+            int idx = (i*LEDS_PER_SLCTR) + j;
+            paramColors[idx] = c;
+        }        
     }
+    row3startIdx = (ROW_3_CTR - ((nAnimParams / 2) * LEDS_PER_SLCTR));
 }
 
-void DrawScale::setParameter(bool isGlobalArg, uint8_t paramIdxArg){
+#define PRINTCOLOR(n) ((n.r<<18) + (n.g<<8) + n.b)
+
+void DrawScale::setParameter(bool isGlobalArg, uint8_t paramIndexArg){
     isGlobal = isGlobalArg;
-    paramIdx = paramIdxArg;
+    paramIndex = paramIndexArg;
     parameter_t param;
     if(isGlobal){
-        param = globParams[paramIdx];
+        param = globParams[paramIndex];
+        currParamLedIdx = ROW_2_START_IDX + (paramIndex * LEDS_PER_SLCTR);
+        currColor = globColors[paramIndex*LEDS_PER_SLCTR];
     } else {
-        param = animation->getParam(paramIdx);
+        param = animation->getParam(paramIndex);
+        currParamLedIdx = row3startIdx + (paramIndex * LEDS_PER_SLCTR);
+        currColor = paramColors[paramIndex*LEDS_PER_SLCTR];
     }    
-    maxVal = param.max==0? 256 : param.max;
+
+    #ifdef DEBUG        
+        // Serial.printf("curr color: %x\n\n", PRINTCOLOR(currColor));
+    #endif
+
+    maxVal = param.max? param.max : 255;
     brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / maxVal;
     
     #ifdef DEBUG        
-        //Serial.printf("Init - argMax: %d\targColor: %d\t max: %d\t color: %d\n", nMax, color, maxVal, onColor);
+        // Serial.printf("olor: %d\t max: %d\n", PRINTCOLOR(currColor), maxVal);
     #endif
-
 }
 
+bool newValue;
 void DrawScale::setValue(int val){
-    pValue = CLAMP_SN(val, maxVal);
-    #ifdef DEBUG
-        //newValue = true;
-        //Serial.printf("scale value: %d\n", val);
+    pValue = val;
+    if(val > maxVal || val < -maxVal) {
+        pValue = 0;
+    }
+    #ifdef DEBUG        
+        newValue = true;
     #endif
+        Serial.printf("newval: %d\n", pValue);
 }
     
-void DrawScale::draw(bool blinkOn){
+void DrawScale::draw(){
 
-    for(int globs = 0;globs < 2; globs++){
-        for(int i = 0; i < (globs? NUM_GLOBAL_PARAMS : numAnimParams);i++){
-            
-        }
+    //ledData.leds(ROW_2_START_IDX, NUM_GLOBAL_PARAMS*LEDS_PER_SLCTR
+    memcpy(&ledData.leds[ROW_2_START_IDX], globColors, sizeof(CRGB)*LEDS_PER_SLCTR*NUM_GLOBAL_PARAMS);
+    memcpy(&ledData.leds[row3startIdx], paramColors, sizeof(CRGB)*LEDS_PER_SLCTR*nAnimParams);
+
+    if(millis() & (1<<BLINK_SHIFT)){
+        ledData.leds(currParamLedIdx, currParamLedIdx -1 + LEDS_PER_SLCTR) = CRGB::Black;
     }
-
-    ledData.leds(0, (NUM_GLOBAL_PARAMS + CURR_ANIM->getNumParams() - 1)) = CRGB::LightSeaGreen;
-
-    uint8_t currParamIdx = edittingGlobalParams? paramIdx : (NUM_GLOBAL_PARAMS + paramIdx);
-    if (blinkState)
-    {
-      ledData.leds[currParamIdx] = edittingGlobalParams? globalParams[paramIdx].scaleColor :
-        CURR_ANIM->getParam(paramIdx).scaleColor;
-    }
-    else
-    {
-      ledData.leds[currParamIdx] = CRGB::Black;
-    }
-
     
-        
     ledData.leds(SCALE_START_IDX, SCALE_START_IDX + (SCALE_HALF_SIZE*2) - 1) = CRGB::White;
     ledData.leds[SCALE_START_IDX - 1] = CRGB::Red;
     ledData.leds[SCALE_START_IDX + (SCALE_HALF_SIZE*2)] = CRGB::Red;
 
     if(pValue != 0){
         if(abs(pValue) == maxVal){
-            ledData.leds(SCALE_START_IDX, SCALE_END_IDX)  = onColor;
-        } else {         
+            ledData.leds(SCALE_START_IDX, SCALE_END_IDX)  = currColor;
+        } else {  
             int brightPoints = pValue * brightnessPointsPerValue;
             int numFullLeds = brightPoints / 256;
             int16_t remainingBrightness = brightPoints % 256;
@@ -112,18 +132,26 @@ void DrawScale::draw(bool blinkOn){
                 end = SCALE_END_IDX;
                 partial = begginning - 1;
             }   
+                
+            #ifdef DEBUG
+                // if(newValue){ 
+                //     newValue = false;
+                //     Serial.printf("color %x, begginning: %d\t end: %d\n", PRINTCOLOR(currColor), begginning, end);
+                // }
+            #endif   
 
             if(end >= begginning){
-                ledData.leds(begginning, end)  = onColor;
+                ledData.leds(begginning, end)  = currColor;
+                
+                #ifdef DEBUG
+                    // if(newValue){ 
+                    //     newValue = false;
+                    //     Serial.printf("color %x, begginning: %d\t end: %d\n", PRINTCOLOR(currColor), begginning, end);
+                    // }
+                #endif   
             }
 
-            #ifdef DEBUG
-                // if(newValue){
-                //     newValue = false;
-                //     Serial.printf("n: %d\tb: %d\te: %d\tp: %d\tpb: %d\t\n", numFullLeds, begginning, end, partial, remainingBrightness);
-                // }
-            #endif
-            ledData.leds[partial] = ledData.leds[partial].lerp8(onColor, remainingBrightness);
+            ledData.leds[partial] = ledData.leds[partial].lerp8(currColor, remainingBrightness);
         }
     }
 }

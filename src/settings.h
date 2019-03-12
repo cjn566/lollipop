@@ -14,7 +14,13 @@
     // UI Timing
     #define DEBOUNCE_MILLIS       50
     #define EDIT_HOLD_MILLIS      700
-    #define EDIT_TIMEOUT_MILLIS   4000
+    
+    #ifdef DEBUG
+        #define EDIT_TIMEOUT_MILLIS   10000
+    #else
+        #define EDIT_TIMEOUT_MILLIS   4000
+    #endif
+
     #define BLINK_MILLIS          500
     #define FAST_SCROLL_MS        60
     #define FAST_SCROLL_RESET     700
@@ -38,7 +44,7 @@
 
     // Video
     #ifdef DEBUG
-        #define FPS                 150
+        #define FPS                 100
     #else
         #define FPS                 150
     #endif
@@ -47,7 +53,7 @@
 
     // Misc
     #define MAX_MILLIAMPS          1500
-    #define STARTUP_DELAY          1000
+    #define STARTUP_DELAY          500
     #define ENC_TICKS_PER_INDENT   4
 
 #endif

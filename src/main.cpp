@@ -27,16 +27,24 @@ enum GlobalParams
 parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
     parameter_t{CRGB::Gold}, // Brightness
     parameter_t{CRGB::Green, 127},   // Speed
-    parameter_t{CRGB::Black} // Saturation
+    parameter_t{CRGB::Red} // Saturation
 };
 
-UI_State ui_state = HOME;
-bool blinkState = true, edittingGlobalParams = true;
-long frameMillis, blinkMillis;
-uint8_t paramIdx = 0;
-uint8_t numAnimParams, numTotalParams;
-DrawScale drawScale = DrawScale(globalParams);
-state_t ledData;
+#ifdef DEBUG
+    UI_State ui_state = HOME;
+    bool edittingGlobalParams = false;
+    uint8_t paramIdx = 4;
+    uint8_t numAnimParams, numTotalParams;
+    DrawScale drawScale;
+    state_t ledData;
+#else
+    UI_State ui_state = HOME;
+    bool edittingGlobalParams = true;
+    uint8_t paramIdx = 0;
+    uint8_t numAnimParams, numTotalParams;
+    DrawScale drawScale;
+    state_t ledData;
+#endif
 
 // -------- ANIMATIONS ---------------
 #define NUM_ANIMATIONS 3
@@ -92,6 +100,7 @@ void setup()
   #endif
 
   delay(STARTUP_DELAY);
+  drawScale.init(globalParams);
   encoder.write(0);
   pinMode(ENCODER_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENCODER_BTN), debounceButton, CHANGE);
@@ -102,6 +111,7 @@ void setup()
   FastLED.setMaxRefreshRate(FPS);
 
   initAnimation();
+  initParam();
 }
 
 //-------------- UI -> PARAMETERS ---------------------------------
@@ -109,34 +119,32 @@ void setup()
 void changeValue(bool up)
 {
   if(edittingGlobalParams){
-    int adj = (INCDEC * ledData.fast_scroll_ctr) >> 1;
     switch (paramIdx)
     {
     case BRIGHTNESS:
-      brightness = CLAMP_8(brightness + adj);
+      brightness = CLAMP_8(brightness + FAST_SCROLL);
       FastLED.setBrightness(brightness);
       drawScale.setValue(brightness);
       break;
     case SPEED:
-      CURR_ANIM->adjSpeed(adj);
+      drawScale.setValue(CURR_ANIM->adjSpeed(FAST_SCROLL));
       break;
     case SATURATION:
-      ledData.saturation = CLAMP_8(ledData.saturation + adj);
+      ledData.saturation = CLAMP_8(ledData.saturation + FAST_SCROLL);
       drawScale.setValue(ledData.saturation);
     }
   }
-  else CURR_ANIM->adjParam(paramIdx, up);
+  else drawScale.setValue(CURR_ANIM->adjParam(paramIdx, FAST_SCROLL));
 }
 
 uint8_t ticksToAdjust = 1;
 void initParam()
 {
+  ledData.fast_scroll_ctr = 0;
+  drawScale.setParameter(edittingGlobalParams, paramIdx);
   encoder.write(0);
-  blinkState = true;
-  blinkMillis = millis();
   if(edittingGlobalParams){
     ticksToAdjust = globalParams[paramIdx].ticksToAdjust;
-    drawScale.init(&globalParams[paramIdx]);
     switch(paramIdx){
       case BRIGHTNESS:
         drawScale.setValue(brightness);
@@ -152,7 +160,7 @@ void initParam()
   else
   {
     ticksToAdjust = CURR_ANIM->getParam(paramIdx).ticksToAdjust;
-    CURR_ANIM->initParam(paramIdx);
+    drawScale.setValue(CURR_ANIM->adjParam(paramIdx, 0));
   }
 }
 
@@ -160,7 +168,6 @@ void initParam()
 
 void changeState(UI_State newState)
 {
-  if(ui_state == HOME) drawScale.turnoff();
   switch (newState)
   {
   case EDIT:
@@ -177,8 +184,8 @@ void changeState(UI_State newState)
 }
 
 void initAnimation(){
+    drawScale.setAnimation(CURR_ANIM);
     numAnimParams = CURR_ANIM->getNumParams();
-    numTotalParams = numAnimParams + NUM_GLOBAL_PARAMS;
     CURR_ANIM->initAnim();
 }
 
@@ -243,14 +250,7 @@ void doFrame()
   FastLED.clear();
   CURR_ANIM->drawBase(elapse);
 
-  if ( ui_state == EDIT )
-  {
-    if (now - blinkMillis >= BLINK_MILLIS){
-      blinkMillis = now;
-      blinkState = !blinkState;
-    }
-    drawScale.draw(blinkState, edittingGlobalParams, paramIdx);    
-  }
+  if ( ui_state == EDIT ) drawScale.draw();
 }
 
 //-------------- THE LOOP -------------------------
@@ -286,7 +286,7 @@ void loop()
 
         int delay = now - lastActivityMillis;
         if(delay < FAST_SCROLL_MS){
-          ledData.fast_scroll_ctr = CLAMP_UN_0(ledData.fast_scroll_ctr+1, FAST_SCROLL_MAX) ;
+          ledData.fast_scroll_ctr = clamp_un0(ledData.fast_scroll_ctr+1, FAST_SCROLL_MAX) ;
         } else if( delay > FAST_SCROLL_RESET){
           ledData.fast_scroll_ctr = 2;
         }

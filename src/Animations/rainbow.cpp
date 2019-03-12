@@ -32,29 +32,15 @@ struct Rainbow : public AnimationBase{
     void initAnim(){
     }
 
-    void initParam(uint8_t paramIdx){
-        drawScale.init(&params[paramIdx]);
-        switch (paramIdx)
-        {
-            case STRETCH:
-                drawScale.setValue(stretch);
-                break;
-        
-            default:
-                break;
-        }
-    }
-
-    void adjParam(uint8_t paramIdx, bool up){
-        int adj = (INCDEC * ledData.fast_scroll_ctr) >> 1;
+    int adjParam(uint8_t paramIdx, int change){
         switch(paramIdx){
             case STRETCH:
-                stretch = CLAMP_UN_0(stretch + adj, MAX_STRETCH);
-                drawScale.setValue(stretch);
-                break;
+                stretch = clamp_un0(stretch + change, MAX_STRETCH);
+                return stretch;
+                
+            default: return 0;
         }
     }
-
 
     void drawFrame(int16_t scaledTimeSinceLastFrame){
         currTime += scaledTimeSinceLastFrame;

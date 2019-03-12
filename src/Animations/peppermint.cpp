@@ -11,12 +11,14 @@
         #define MAX_SKEW 5
         enum ParamName {
             SPOKE,
+            BASE_HUE,
             D_HUE,
             SKEW
         };
 
         // params vars
         uint8_t deltaHue;
+        uint8_t baseHue = 0;
         uint8_t numSpokes = 2;
         int8_t skew = 0;
 
@@ -29,7 +31,7 @@
 
         public:
         Peppermint(){
-            numParams = 3;
+            numParams = 4;
             params = new parameter_t[numParams];
             params[SPOKE].max = MAX_SPOKES;
             params[SPOKE].ticksToAdjust = 2;
@@ -55,41 +57,22 @@
             #endif
         }
 
-        void initParam(uint8_t paramIdx){
+        int adjParam(uint8_t paramIdx, int change){
             switch(paramIdx){
                 case SPOKE:
-                    drawScale.init(&params[paramIdx]);
-                    drawScale.setValue(numSpokes);
-                    break;
-                case D_HUE:
-                    drawScale.init(numSpokes, params[paramIdx].scaleColor);
-                    drawScale.setValue(deltaHue);
-                    break;
-                case SKEW:
-                    drawScale.init(&params[paramIdx]);
-                    drawScale.setValue(skew);
-                    break;
-            }
-        }
-
-        void adjParam(uint8_t paramIdx, bool up){
-            switch(paramIdx){
-                case SPOKE:
-                    numSpokes = CLAMP_UN_1(numSpokes + INCDEC, MAX_SPOKES);
-                    drawScale.setValue(numSpokes);
+                    numSpokes = clamp_un1(numSpokes + change, MAX_SPOKES);
                     initAnim();
-                    break;
+                    return numSpokes;
+                case BASE_HUE:
+                    baseHue = CLAMP_8(baseHue + change);
+                    return baseHue;
                 case D_HUE:
-                    deltaHue = CLAMP_UN_1(deltaHue + INCDEC, numSpokes);
-                    drawScale.setValue(deltaHue);
-                    break;
+                    deltaHue = clamp_un1(deltaHue + change, numSpokes<<1);
+                    return deltaHue;
                 case SKEW:
-                    skew = CLAMP_SN(skew + INCDEC, MAX_SKEW);
-                    drawScale.setValue(skew);
-                    #ifdef DEBUG
-                    Serial.printf("Skew: %d\n", skew);
-                    #endif
-                    break;
+                    skew = clamp_sn(skew + change, MAX_SKEW);
+                    return skew;
+                default: return 0;
             }
         }
 
@@ -98,7 +81,7 @@
         void drawFrame(int16_t scaledTimeSinceLastFrame){
             curMillis += scaledTimeSinceLastFrame;
             if(curMillis > millisInFractionalRotation) curMillis -= millisInFractionalRotation;            
-            currAngle = SCALE32_TO_8(curMillis, millisInFullRotation);
+            currAngle = scale_to_n(curMillis, millisInFullRotation, 255);
 
             for(int i=0;i< NUM_LEDS ;i++){
                 uint8_t anglePlusRotation = mod8(sub8(radii[i][ANGLE], currAngle), angleBetweenSpokes);
@@ -113,7 +96,7 @@
 
 
                 anglePlusRotation = anglePlusRotation * deltaHue;
-                ledData.leds[i] = CHSV(anglePlusRotation, ledData.saturation, 255);
+                ledData.leds[i] = CHSV(baseHue + anglePlusRotation, ledData.saturation, 255);
             }
         }
     };
