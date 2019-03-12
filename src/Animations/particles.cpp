@@ -2,9 +2,8 @@
 
 struct Particles: public AnimationBase{
 
-    
     #ifdef DEBUG
-        #define MAX_PARTICLES 80
+        #define MAX_PARTICLES 2
     #else
         #define MAX_PARTICLES 80
     #endif
@@ -13,7 +12,10 @@ struct Particles: public AnimationBase{
     #define TS_TRUNC    3
     #define TS_MOD MAX_UVAL_N_BITS(TS_W)
 
-
+    #define MAX_VELOC (1 << (LOC_REDUCTION) + 1)                
+    #define VEL_LEFT_SH         6
+    #define ACCEL_RIGHT_SH      9
+    #define LOC_REDUCTION   12
 
     #define LS_LEFT_SH      10
     #define HUE_CTR_MULT   2
@@ -41,18 +43,17 @@ struct Particles: public AnimationBase{
     } mode = WRAP;
 
     // params vars
-    uint8_t lifespan = 255;
-    uint8_t spawnRate = 180;
-    uint8_t spawnRateVar = 0;
-    int8_t velocity = 127;
-    uint8_t velocityVar = 0;
-    int8_t acceleration = 127;
-    uint8_t accelVar = 0;
-    uint8_t hueVar = 0;
-    int8_t hueCycleRate = 80 << HUE_CTR_MULT;
+    uint8_t lifespan = 10;
+    uint8_t spawnRate = 10;
+    uint8_t spawnRateVar = 255;
+    int8_t velocity = 0;
+    uint8_t velocityVar = 60;
+    int8_t acceleration = 0;
+    uint8_t accelVar = 20;
+    int8_t hueCycleRate = 2;
+    uint8_t hueVar = 40;
 
     // state vars
-    int      maxAge = 0;
     uint32_t     realLifespan;
     uint16_t hue = 0;
     uint8_t numParticles = 0, newParticleIdx = 0;
@@ -63,35 +64,36 @@ struct Particles: public AnimationBase{
         uint8_t start_loc, hue;
         int8_t vel_mod, accel_mod;
     } particle[MAX_PARTICLES];
-    //uint32_t particle[MAX_PARTICLES];
-    
-
 
     public:
     Particles(){
         numParams = 10;
         params = new parameter_t[numParams];
-        params[MODE].max = 3;
+        params[MODE].max = 2;
+        params[MODE].scaleColor = CRGB::Amethyst;
+        params[MODE].isChunks = true;
         params[MODE].ticksToAdjust = 3;
         params[VELOCITY].max = 127;
         params[ACCELERATION].max = 127;
         params[COLOR_CYCLE_RATE].max = 20;
 
-        params[SPAWN_RATE].scaleColor = CRGB::DarkBlue;
-        params[SPAWN_RATE_VAR].scaleColor = CRGB::LightBlue;
+        params[SPAWN_RATE].scaleColor       = CRGB::DarkBlue;
+        params[SPAWN_RATE_VAR].scaleColor   = CRGB::LightBlue;
         params[COLOR_CYCLE_RATE].scaleColor = CRGB::DarkMagenta;
-        params[COLOR_VAR].scaleColor = CRGB::Pink;
-        params[VELOCITY].scaleColor = CRGB::DarkGreen;
-        params[VELOCITY_VAR].scaleColor = CRGB::LightGreen;
-        params[ACCELERATION].scaleColor = CRGB::Orange;
+        params[COLOR_VAR].scaleColor        = CRGB::Pink;
+        params[VELOCITY].scaleColor         = CRGB::DarkGreen;
+        params[VELOCITY_VAR].scaleColor     = CRGB::LightGreen;
+        params[ACCELERATION].scaleColor     = CRGB::Orange;
         params[ACCELERATION_VAR].scaleColor = CRGB::Yellow;
+    };
+
+    int getSpawnDelay(){
+        return spawnRate * SPEED_SCALE_BASE * 8;
     };
 
     void initAnim(){
         random16_add_entropy(millis() & MAKE_MASK(TS_W));
-
-        spawnDelay = spawnRate * SPEED_SCALE_BASE * 8;
-        thisSpawnDelay = spawnDelay;
+        thisSpawnDelay = getSpawnDelay();
         realLifespan = lifespan << LS_LEFT_SH;
 
         for(int i =0; i<MAX_PARTICLES; i++) particle[i].birthtime = 0; // Reset Particles
@@ -105,10 +107,8 @@ struct Particles: public AnimationBase{
         switch(paramIdx){
             case MODE:
             {
-                int tempMode = (int)mode + 1;
-                if(change) tempMode = clamp_un1(tempMode + (change > 0? 1:-1), 3);
-                mode = (Mode)(tempMode - 1);
-                return tempMode;
+                mode = (Mode)clamp_un0(mode + (change > 0? 1:-1), 2);
+                return mode;
             }
             case LIFESPAN:
                 lifespan = CLAMP_8(lifespan + change);
@@ -161,7 +161,7 @@ struct Particles: public AnimationBase{
     void drawFrame(int16_t millisSinceLastFrame){
         unsigned long now = (millis() >> TS_TRUNC) & MAKE_MASK(TS_W);
 
-                // Spawn
+        // Spawn
         if(numParticles < MAX_PARTICLES){     
             counter += millisSinceLastFrame;
             if(counter >= thisSpawnDelay || counter < 0){
@@ -170,7 +170,7 @@ struct Particles: public AnimationBase{
                 
                 int variance = ((random8() - 127) * spawnRateVar * spawnDelay);
                 variance /= (256*127);
-                thisSpawnDelay = spawnDelay + variance;
+                thisSpawnDelay = getSpawnDelay() + variance;
                 
                 while(particle[newParticleIdx].birthtime){	// Find next available slot
                     newParticleIdx = (newParticleIdx + 1) % MAX_PARTICLES;
@@ -178,10 +178,7 @@ struct Particles: public AnimationBase{
                 // Build new particle
                 numParticles++;
 
-                bool randStart = true;
-
-                uint8_t loc_rand = 0;
-                if(randStart) loc_rand = random8() % ENDPOINT;
+                uint8_t loc_rand = random8() % ENDPOINT;
                 int hueRand = scale8(random8(), hueVar);
                 int velRand = scale_by_n(random8()-127, (int)velocityVar, 255);
                 int accelRand = scale_by_n(random8()-127, (int)accelVar, 255);
@@ -191,51 +188,28 @@ struct Particles: public AnimationBase{
                 particle[newParticleIdx].hue        = (uint8_t)(hue >> HUE_CTR_MULT) + hueRand;
                 particle[newParticleIdx].vel_mod     = velRand;
                 particle[newParticleIdx].accel_mod   = accelRand;
-
-                #ifdef DEBUG
-                    //P_values testValues = expandP(particle[newParticleIdx]);
-                #endif
-
+                
                 hue += hueCycleRate;
             }
         }
 
         for (int i = 0; i < MAX_PARTICLES; i++){
-                //Serial.print(particle[i].active? 'p':'-');
             if(particle[i].birthtime){
                 unsigned long age = (now - particle[i].birthtime);
-
-                #ifdef DEBUG
-                    //Serial.printf("idx: %d\tbirthtime: %d\t  pre-mod age: %d\n", i, particle[i].birthtime, age);
-                #endif
-                    // Serial.print("boop\n");
-
                 if(age < 0){
                     age += TS_MOD;
                 }
-
                 age *= speed;
                 if(age > realLifespan){
                     killParticle(i);
                     continue;
-                }
-                
+                }                
                 if(!age){
                     age = 1;
                 }
-                #define MAX_VELOC (1 << (LOC_REDUCTION) + 1)                
-                #define VEL_LEFT_SH         6
-                #define ACCEL_RIGHT_SH      9
-                #define LOC_REDUCTION   12
 
-                //Serial.printf("vel: %d + mod: %d = %d", velocity, particle[i].vel_mod, velocity + particle[i].vel_mod);
                 int veloc = (velocity + particle[i].vel_mod) << VEL_LEFT_SH;
-                //Serial.printf("<< %d\n", veloc);
-                //Serial.printf("accel: %d + mod: %d ", acceleration, particle[i].accel_mod);
-                //int accelVeloc = (((acceleration + particle[i].accel_mod) * age) >> ACCEL_RIGHT_SH);
-                //int accelSum = acceleration + particle[i].accel_mod;
                 int fullAccel = (acceleration + particle[i].accel_mod) * age;
-                //Serial.printf("%d\n", fullAccel);
                 int reducedAccel = fullAccel >> ACCEL_RIGHT_SH;
                 veloc = clamp_sn(veloc + reducedAccel, MAX_VELOC);
                 int location = veloc * age;
@@ -259,20 +233,12 @@ struct Particles: public AnimationBase{
                             break;
                     }
                 }
-                    // Serial.print("boop\n");
                 uint8_t loc_idx = (location >> (LOC_REDUCTION + 8)) + 1;
                 uint16_t loc_fractional = (location >> LOC_REDUCTION) & 0xff;
-
-                    // Serial.print("boop\n");
-                #ifdef DEBUG
-                    //Serial.printf("new age: %d\tloc: %d\n", age, location);
-                #endif
                 
-                if(particle[i].birthtime){
-                    ledData.leds[loc_idx - 1] += CHSV(particle[i].hue, ledData.saturation, 255 - loc_fractional);
-                    ledData.leds[loc_idx] += CHSV(particle[i].hue, ledData.saturation, 255);
-                    ledData.leds[loc_idx + 1] += CHSV(particle[i].hue, ledData.saturation, loc_fractional);
-                }
+                ledData.leds[loc_idx - 1] += CHSV(particle[i].hue, ledData.saturation, 255 - loc_fractional);
+                ledData.leds[loc_idx] += CHSV(particle[i].hue, ledData.saturation, 255);
+                ledData.leds[loc_idx + 1] += CHSV(particle[i].hue, ledData.saturation, loc_fractional);
             }
         }
     }

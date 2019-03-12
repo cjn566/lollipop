@@ -20,6 +20,7 @@
         CRGB scaleColor = CRGB::Black;
         int max = 0;
         uint8_t ticksToAdjust = 1;
+        bool isChunks = false;
     };
   
     struct AnimationBase {

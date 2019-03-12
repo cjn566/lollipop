@@ -18,7 +18,7 @@
 
 int pValue;
 int maxVal;
-bool isGlobal;
+bool isGlobal, isChunks;
 uint8_t paramIndex, nAnimParams, mostParams, currParamLedIdx, row3startIdx;
 parameter_t * globParams;
 AnimationBase * animation;
@@ -48,7 +48,6 @@ void DrawScale::setAnimation(AnimationBase *animationArg){
     for(int i = 0; i<nAnimParams; i++){
         CRGB c = animation->getParam(i).scaleColor;
         if(!(c.r || c.b ||c.g)){
-            Serial.printf("no C\n");
             c = CHSV(DFLT_HUE + (i* 80), 255,255);
         }
         for(int j = 0; j< LEDS_PER_SLCTR; j++){
@@ -58,8 +57,6 @@ void DrawScale::setAnimation(AnimationBase *animationArg){
     }
     row3startIdx = (ROW_3_CTR - ((nAnimParams / 2) * LEDS_PER_SLCTR));
 }
-
-#define PRINTCOLOR(n) ((n.r<<18) + (n.g<<8) + n.b)
 
 void DrawScale::setParameter(bool isGlobalArg, uint8_t paramIndexArg){
     isGlobal = isGlobalArg;
@@ -73,18 +70,10 @@ void DrawScale::setParameter(bool isGlobalArg, uint8_t paramIndexArg){
         param = animation->getParam(paramIndex);
         currParamLedIdx = row3startIdx + (paramIndex * LEDS_PER_SLCTR);
         currColor = paramColors[paramIndex*LEDS_PER_SLCTR];
-    }    
-
-    #ifdef DEBUG        
-        // Serial.printf("curr color: %x\n\n", PRINTCOLOR(currColor));
-    #endif
-
+    }
+    isChunks = param.isChunks;
     maxVal = param.max? param.max : 255;
-    brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / maxVal;
-    
-    #ifdef DEBUG        
-        // Serial.printf("olor: %d\t max: %d\n", PRINTCOLOR(currColor), maxVal);
-    #endif
+    brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / (maxVal + (isChunks?1:0));
 }
 
 bool newValue;
@@ -93,15 +82,9 @@ void DrawScale::setValue(int val){
     if(val > maxVal || val < -maxVal) {
         pValue = 0;
     }
-    #ifdef DEBUG        
-        newValue = true;
-    #endif
-        Serial.printf("newval: %d\n", pValue);
 }
     
 void DrawScale::draw(){
-
-    //ledData.leds(ROW_2_START_IDX, NUM_GLOBAL_PARAMS*LEDS_PER_SLCTR
     memcpy(&ledData.leds[ROW_2_START_IDX], globColors, sizeof(CRGB)*LEDS_PER_SLCTR*NUM_GLOBAL_PARAMS);
     memcpy(&ledData.leds[row3startIdx], paramColors, sizeof(CRGB)*LEDS_PER_SLCTR*nAnimParams);
 
@@ -113,7 +96,11 @@ void DrawScale::draw(){
     ledData.leds[SCALE_START_IDX - 1] = CRGB::Red;
     ledData.leds[SCALE_START_IDX + (SCALE_HALF_SIZE*2)] = CRGB::Red;
 
-    if(pValue != 0){
+    if(isChunks){
+        int numLeds = brightnessPointsPerValue / 256;
+        ledData.leds(SCALE_START_IDX + (pValue*numLeds), SCALE_START_IDX + ((pValue + 1) * numLeds))  = currColor;
+    }
+    else if(pValue != 0){
         if(abs(pValue) == maxVal){
             ledData.leds(SCALE_START_IDX, SCALE_END_IDX)  = currColor;
         } else {  
@@ -131,24 +118,10 @@ void DrawScale::draw(){
                 begginning = SCALE_END_IDX + numFullLeds + 1;
                 end = SCALE_END_IDX;
                 partial = begginning - 1;
-            }   
-                
-            #ifdef DEBUG
-                // if(newValue){ 
-                //     newValue = false;
-                //     Serial.printf("color %x, begginning: %d\t end: %d\n", PRINTCOLOR(currColor), begginning, end);
-                // }
-            #endif   
+            }
 
             if(end >= begginning){
                 ledData.leds(begginning, end)  = currColor;
-                
-                #ifdef DEBUG
-                    // if(newValue){ 
-                    //     newValue = false;
-                    //     Serial.printf("color %x, begginning: %d\t end: %d\n", PRINTCOLOR(currColor), begginning, end);
-                    // }
-                #endif   
             }
 
             ledData.leds[partial] = ledData.leds[partial].lerp8(currColor, remainingBrightness);
