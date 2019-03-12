@@ -18,7 +18,8 @@
 
 int pValue;
 int maxVal;
-bool isGlobal, isChunks;
+bool isGlobal;
+DispType type;
 uint8_t paramIndex, nAnimParams, mostParams, currParamLedIdx, row3startIdx;
 parameter_t * globParams;
 AnimationBase * animation;
@@ -71,9 +72,9 @@ void DrawScale::setParameter(bool isGlobalArg, uint8_t paramIndexArg){
         currParamLedIdx = row3startIdx + (paramIndex * LEDS_PER_SLCTR);
         currColor = paramColors[paramIndex*LEDS_PER_SLCTR];
     }
-    isChunks = param.isChunks;
+    type = param.type;
     maxVal = param.max? param.max : 255;
-    brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / (maxVal + (isChunks?1:0));
+    brightnessPointsPerValue = (SCALE_FULL_SIZE * 256) / (maxVal + (type==CHUNKS?1:0));
 }
 
 bool newValue;
@@ -96,35 +97,45 @@ void DrawScale::draw(){
     ledData.leds[SCALE_START_IDX - 1] = CRGB::Red;
     ledData.leds[SCALE_START_IDX + (SCALE_HALF_SIZE*2)] = CRGB::Red;
 
-    if(isChunks){
-        int numLeds = brightnessPointsPerValue / 256;
-        ledData.leds(SCALE_START_IDX + (pValue*numLeds), SCALE_START_IDX + ((pValue + 1) * numLeds))  = currColor;
-    }
-    else if(pValue != 0){
-        if(abs(pValue) == maxVal){
-            ledData.leds(SCALE_START_IDX, SCALE_END_IDX)  = currColor;
-        } else {  
-            int brightPoints = pValue * brightnessPointsPerValue;
-            int numFullLeds = brightPoints / 256;
-            int16_t remainingBrightness = brightPoints % 256;
-            if(remainingBrightness < 0) remainingBrightness = -remainingBrightness;
-            uint8_t begginning, end, partial;
+    switch(type){
+        case CHUNKS:
+            int numLeds = brightnessPointsPerValue / 256;
+            ledData.leds(SCALE_START_IDX + (pValue*numLeds), SCALE_START_IDX + ((pValue + 1) * numLeds))  = currColor;
+            break;
+        case BOOL:
+            ledData.leds(pValue? SCALE_START_IDX : RIGHT_OF_MID_IDX, pValue? RIGHT_OF_MID_IDX - 1: SCALE_END_IDX)  = currColor;
+            break;
+        case HUE:
             
-            if(pValue > 0){
-                begginning = SCALE_START_IDX;
-                end = SCALE_START_IDX + numFullLeds - 1;
-                partial = end + 1;
-            } else {
-                begginning = SCALE_END_IDX + numFullLeds + 1;
-                end = SCALE_END_IDX;
-                partial = begginning - 1;
-            }
+            break;
+        case OTHER:
+            if(pValue != 0){
+                if(abs(pValue) == maxVal){
+                    ledData.leds(SCALE_START_IDX, SCALE_END_IDX)  = currColor;
+                } else {  
+                    int brightPoints = pValue * brightnessPointsPerValue;
+                    int numFullLeds = brightPoints / 256;
+                    int16_t remainingBrightness = brightPoints % 256;
+                    if(remainingBrightness < 0) remainingBrightness = -remainingBrightness;
+                    uint8_t begginning, end, partial;
+                    
+                    if(pValue > 0){
+                        begginning = SCALE_START_IDX;
+                        end = SCALE_START_IDX + numFullLeds - 1;
+                        partial = end + 1;
+                    } else {
+                        begginning = SCALE_END_IDX + numFullLeds + 1;
+                        end = SCALE_END_IDX;
+                        partial = begginning - 1;
+                    }
 
-            if(end >= begginning){
-                ledData.leds(begginning, end)  = currColor;
-            }
+                    if(end >= begginning){
+                        ledData.leds(begginning, end)  = currColor;
+                    }
 
-            ledData.leds[partial] = ledData.leds[partial].lerp8(currColor, remainingBrightness);
-        }
-    }
+                    ledData.leds[partial] = ledData.leds[partial].lerp8(currColor, remainingBrightness);
+                }
+            }
+            break;
+    }        
 }

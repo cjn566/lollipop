@@ -16,11 +16,18 @@
 
     extern state_t ledData;
 
+    enum DispType {
+        CHUNKS,
+        BOOL,
+        HUE,
+        OTHER
+    };
+
     struct parameter_t {
         CRGB scaleColor = CRGB::Black;
         int max = 0;
         uint8_t ticksToAdjust = 1;
-        bool isChunks = false;
+        DispType type = OTHER;
     };
   
     struct AnimationBase {
