@@ -12,12 +12,12 @@ struct Particles: public AnimationBase{
     #define TS_MOD MAX_UVAL_N_BITS(TS_W)
 
     #define MAX_VELOC (1 << (LOC_REDUCTION) + 2)                
-    #define VEL_LEFT_SH         6
-    #define ACCEL_RIGHT_SH      10
-    #define LOC_REDUCTION   12
+    #define VEL_LEFT_SH         7
+    #define ACCEL_RIGHT_SH      9
+    #define LOC_REDUCTION       12
 
-    #define LS_LEFT_SH      10
-    #define HUE_CTR_MULT   2
+    #define LS_LEFT_SH          10
+    #define HUE_CTR_MULT        2
     #define LOC_MAX (ENDPOINT << (LOC_REDUCTION + 8))
     #define ENDPOINT 193
     #define OVFL_TIME_CUTOFF 500
@@ -189,13 +189,17 @@ struct Particles: public AnimationBase{
                 if(randstart) loc_rand = random8() % ENDPOINT;
                 int hueRand = scale8(random8(), hueVar);
                 int velRand = scale_by_n(random8()-127, (int)velocityVar, 255);
+                int velTot = velRand + velocity;
+                velTot = velTot >> 1;
                 int accelRand = scale_by_n(random8()-127, (int)accelVar, 255);
+                int accelTot = acceleration + accelRand;
+                accelTot = accelTot >> 1;
 
                 particle[newParticleIdx].birthtime  = now;
                 particle[newParticleIdx].start_loc  = loc_rand;
                 particle[newParticleIdx].hue        = hue + hueRand;
-                particle[newParticleIdx].vel_mod     = velRand;
-                particle[newParticleIdx].accel_mod   = accelRand;
+                particle[newParticleIdx].vel_mod     = velTot;
+                particle[newParticleIdx].accel_mod   = accelTot;
                 
                 hue += hueCycleRate;
             }
@@ -213,8 +217,8 @@ struct Particles: public AnimationBase{
                     age = 1;
                 }
 
-                int veloc = (velocity + particle[i].vel_mod) << VEL_LEFT_SH;
-                int fullAccel = (acceleration + particle[i].accel_mod) * age;
+                int veloc = (particle[i].vel_mod) << VEL_LEFT_SH;
+                int fullAccel = (particle[i].accel_mod) * age;
                 int reducedAccel = fullAccel >> ACCEL_RIGHT_SH;
                 veloc = clamp_sn(veloc + reducedAccel, MAX_VELOC);
                 int location = veloc * age;
