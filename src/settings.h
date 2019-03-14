@@ -56,5 +56,10 @@
     #define STARTUP_DELAY          500
     #define ENC_TICKS_PER_INDENT   4
 
+    
+
+    #define NUM_LEDS            204
+    #define ORDER               GRB
+
 #endif
 

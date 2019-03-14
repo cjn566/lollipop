@@ -5,16 +5,13 @@
     #include "util.h"
     #include "settings.h"
 
-    #define NUM_LEDS            204
-    #define ORDER               GRB
-    
-    struct state_t {
-        uint8_t saturation = 255;
-        uint8_t fast_scroll_ctr = 2;
-        CRGBArray<NUM_LEDS> leds;
-    };
+    struct AnimationBase;
 
-    extern state_t ledData;
+    struct if_anim_t {
+        uint8_t saturation = 255;
+        CRGBArray<NUM_LEDS> leds;
+        AnimationBase * animation;
+    };    
 
     enum DispType {
         CHUNKS,
@@ -25,11 +22,21 @@
 
     struct parameter_t {
         CRGB scaleColor = CRGB::Black;
-        int max = 0;
+        int max = 255;
         uint8_t ticksToAdjust = 1;
         DispType type = OTHER;
     };
-  
+
+    struct if_ui_t {
+        bool edittingGlobalParams = true, selectingParams = true;
+        parameter_t * currParam;
+        uint8_t paramIdx, numAnimParams;
+    };
+
+    extern if_anim_t ledData;
+    extern if_ui_t if_ui;
+
+
     struct AnimationBase {
         int8_t speed = SPEED_SCALE_BASE;
         uint8_t numParams;
@@ -37,7 +44,7 @@
         AnimationBase(){};
         virtual void        initAnim(){};
         virtual uint8_t     getNumParams(){return numParams;};
-        virtual parameter_t getParam(uint8_t paramIdx){return params[paramIdx];};
+        virtual parameter_t * getParam(uint8_t paramIdx){return &params[paramIdx];};
         virtual int         adjParam(uint8_t paramIdx, int change);
         virtual void        drawFrame(int16_t){};
         uint8_t             adjSpeed(int adj){
@@ -50,17 +57,5 @@
             drawFrame(modTime);
         }
     };
-
-    
-    class DrawScale {
-        public:
-        DrawScale(){};
-        void init(parameter_t * globParams);
-        void setAnimation(AnimationBase *animationArg);
-        void setParameter(bool isGlobal, uint8_t paramIdx);
-        void setValue(int);
-        void draw();
-    };
-
 
 #endif

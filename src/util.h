@@ -25,7 +25,6 @@
     
 
     #define INCDEC (up?1:-1)
-    #define FAST_SCROLL ((INCDEC * ledData.fast_scroll_ctr) >> 1)
 
     
     #define LOGD(s) Serial.print(s);
