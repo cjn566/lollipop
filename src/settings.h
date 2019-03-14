@@ -27,7 +27,7 @@
     #define FAST_SCROLL_MAX       20
 
     // parameters
-    #define NUM_GLOBAL_PARAMS 3
+    #define NUM_GLOBAL_PARAMS 4
     #define INIT_BRIGHTNESS   40
 
     #ifdef DEBUG

@@ -20,11 +20,19 @@ enum UI_State
 
 enum GlobalParams
 {
+  PATTERN,
   BRIGHTNESS,
   SPEED,
   SATURATION
 };
+parameter_t animSelect{
+    CRGB::FireBrick,
+    2, // max
+    3, // ticks
+    CHUNKS
+};
 parameter_t globalParams[NUM_GLOBAL_PARAMS] = {
+    animSelect,
     parameter_t{CRGB::Gold}, // Brightness
     parameter_t{CRGB::Green, 127},   // Speed
     parameter_t{CRGB::Red} // Saturation
@@ -141,6 +149,10 @@ void adjParam(bool up)
   if(if_ui.edittingGlobalParams){
     switch (if_ui.paramIdx)
     {
+    case PATTERN:
+      currAnimationIdx = clamp_un0(currAnimationIdx + INCDEC, NUM_ANIMATIONS - 1);
+      initAnimation();
+      break;
     case BRIGHTNESS:
       brightness = CLAMP_8(brightness + FAST_SCROLL);
       FastLED.setBrightness(brightness);
@@ -208,8 +220,8 @@ void changeState(UI_State newState)
 
 void initAnimation(){
     ledData.animation = allAnims[currAnimationIdx];
-    ui.setAnimation();
     if_ui.numAnimParams = ledData.animation->getNumParams();
+    ui.setAnimation();
     ledData.animation->initAnim();
 }
 
@@ -230,11 +242,9 @@ void handleButton()
     }
     break;
   case EDIT_DELAY: 
-    if (!isPressed) // Did not finish delay, so quick press = new animation
+    if (!isPressed) // Clicked the button
     {
-      currAnimationIdx = mod8(currAnimationIdx + 1, NUM_ANIMATIONS);
-      initAnimation();
-      changeState(HOME);
+      // Special Effect?
     }
     break;
   case EDIT:  // Button is pressed while in edit mode
